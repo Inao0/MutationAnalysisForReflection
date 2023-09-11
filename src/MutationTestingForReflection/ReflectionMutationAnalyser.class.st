@@ -1,3 +1,17 @@
+"
+Script exemple :
+```
+analyser := ReflectionMutationAnalyser new.
+analyser 
+	classesToStudy:('MySTON' asPackage definedClasses reject: [ :each | each isTestCase ]);
+	correspondingTests: ('MySTON' asPackage definedClasses select: [ :each | each isTestCase ]);
+	selectorsToMutate: {#lookupClass: . #isMeta .#allSubclasses . #instVarNamed: . #instVarNamed:put: }.
+
+analyser run.
+analyser exportForUpsetWithSuffix: 'STON'.
+```
+
+"
 Class {
 	#name : #ReflectionMutationAnalyser,
 	#superclass : #Object,
