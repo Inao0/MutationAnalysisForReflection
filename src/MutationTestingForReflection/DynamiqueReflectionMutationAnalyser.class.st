@@ -13,7 +13,7 @@ analyser exportForUpsetWithSuffix: 'STON'.
 
 "
 Class {
-	#name : 'ReflectionMutationAnalyser',
+	#name : 'DynamiqueReflectionMutationAnalyser',
 	#superclass : 'Object',
 	#instVars : [
 		'selectorsToMutate',
@@ -21,21 +21,24 @@ Class {
 		'correspondingTests',
 		'analysis',
 		'aliveMutants',
-		'killedOrTerminatedMutants'
+		'killedOrTerminatedMutants',
+		'alive',
+		'killedTerminated',
+		'allMutants'
 	],
 	#category : 'MutationTestingForReflection',
 	#package : 'MutationTestingForReflection'
 }
 
 { #category : 'accessing' }
-ReflectionMutationAnalyser >> aliveMutants [
+DynamiqueReflectionMutationAnalyser >> aliveMutants [
 
 	^ aliveMutants ifNil: [
 		  aliveMutants := analysis generalResult aliveMutants ]
 ]
 
 { #category : 'accessing' }
-ReflectionMutationAnalyser >> allMutants [
+DynamiqueReflectionMutationAnalyser >> allMutants [
 
 	| allMutants |
 	allMutants := self aliveMutants copy.
@@ -44,31 +47,31 @@ ReflectionMutationAnalyser >> allMutants [
 ]
 
 { #category : 'accessing' }
-ReflectionMutationAnalyser >> classesToStudy [
+DynamiqueReflectionMutationAnalyser >> classesToStudy [
 
 	^ classesToStudy
 ]
 
 { #category : 'accessing' }
-ReflectionMutationAnalyser >> classesToStudy: anObject [
+DynamiqueReflectionMutationAnalyser >> classesToStudy: anObject [
 
 	classesToStudy := anObject
 ]
 
 { #category : 'accessing' }
-ReflectionMutationAnalyser >> correspondingTests [
+DynamiqueReflectionMutationAnalyser >> correspondingTests [
 
 	^ correspondingTests
 ]
 
 { #category : 'accessing' }
-ReflectionMutationAnalyser >> correspondingTests: anObject [
+DynamiqueReflectionMutationAnalyser >> correspondingTests: anObject [
 
 	correspondingTests := anObject
 ]
 
 { #category : 'as yet unclassified' }
-ReflectionMutationAnalyser >> coverageOfCallSites [
+DynamiqueReflectionMutationAnalyser >> coverageOfCallSites [
 
 	| coverage spiderChartCoveredSites |
 	coverage := (self allMutants groupedBy: [ :each |
@@ -86,7 +89,7 @@ ReflectionMutationAnalyser >> coverageOfCallSites [
 ]
 
 { #category : 'export' }
-ReflectionMutationAnalyser >> exportForUpsetWithSuffix: aSuffix [
+DynamiqueReflectionMutationAnalyser >> exportForUpsetWithSuffix: aSuffix [
 
 	| setOfFailingTests testCases tests mutations coveredMutation mutationNames fileRef |
 	coveredMutation := (self allMutants select: [ :each |
@@ -141,7 +144,7 @@ ReflectionMutationAnalyser >> exportForUpsetWithSuffix: aSuffix [
 ]
 
 { #category : 'accessing' }
-ReflectionMutationAnalyser >> killedOrTerminatedMutants [
+DynamiqueReflectionMutationAnalyser >> killedOrTerminatedMutants [
 
 	^ killedOrTerminatedMutants ifNil: [
 		  killedOrTerminatedMutants := analysis generalResult
@@ -149,7 +152,7 @@ ReflectionMutationAnalyser >> killedOrTerminatedMutants [
 ]
 
 { #category : 'as yet unclassified' }
-ReflectionMutationAnalyser >> percentageOfWorkingTestsAsSpiderChart [
+DynamiqueReflectionMutationAnalyser >> percentageOfWorkingTestsAsSpiderChart [
 	"Covered mutations grouped by selector compared to the whole list of tests. We want to be able to get a better of how each selector is impacting the WHOLE project and not only the tests it is part of."
 
 	| coveredMutation spiderChartWorkingTests |
@@ -171,34 +174,59 @@ ReflectionMutationAnalyser >> percentageOfWorkingTestsAsSpiderChart [
 ]
 
 { #category : 'running' }
-ReflectionMutationAnalyser >> run [ 
-|mutations alive killedTerminated allMutants coverage |
-mutations := selectorsToMutate collect: [:each | AddPrefixToSelectorsMutantOperator newWithSelector: each].
-analysis := MutationTestingAnalysis
-    testCasesFrom: correspondingTests 
-    mutating: classesToStudy 
-    using: mutations
-"	 with: AllTestsMethodsRunningMutantEvaluationStrategy new."
-    with: SelectingFromCoverageMutantEvaluationStrategy new.
-analysis run.
+DynamiqueReflectionMutationAnalyser >> run [
 
-alive := self aliveMutants.
-killedTerminated := self killedOrTerminatedMutants.
-allMutants := self allMutants.
+	| mutations selectorImplementors allReflectiveMethods haltVar |
+	alive := Dictionary new.
+	killedTerminated := Dictionary new.
+	allMutants := Dictionary new.
+	haltVar := false.
 
-"Percentage of call sites covered by the tests for each selectors"
-self coverageOfCallSites.
-self percentageOfWorkingTestsAsSpiderChart.
+	allReflectiveMethods := ((Pragma allNamed: 'reflection:') collect:
+		                         #method) reject: #isFromTrait.
+	selectorsToMutate do: [ :selector |
+		mutations := AddPrefixToSelectorsMutantOperator newWithSelector:
+			             selector.
+		analysis := MutationTestingAnalysis
+			            testCasesFrom: correspondingTests
+			            mutating: classesToStudy
+			            using: {mutations}
+			            with: SelectingFromCoverageMutantEvaluationStrategy new.
+
+		selectorImplementors := allReflectiveMethods select: [ :each |
+			                        each selector = selector ].
+		selectorImplementors do: [ :selectorImplementor |
+			| newMethod |
+			newMethod := selectorImplementor prefixedFailingMethod.
+			newMethod methodClass
+				addSelectorSilently: newMethod selector
+				withMethod: newMethod.
+			Transcript crShow: (selectorImplementor methodClass asString ,'>>', selector).
+			"self haltIf: [ haltVar ]."
+			analysis run.
+			alive at: selectorImplementor put: self aliveMutants.
+			killedTerminated
+				at: selectorImplementor
+				put: self killedOrTerminatedMutants.
+			allMutants at: selectorImplementor put: self allMutants.
+			newMethod := selectorImplementor prefixedProxyMethod.
+			newMethod methodClass
+				addSelectorSilently: newMethod selector
+				withMethod: newMethod ] ].
+	"Percentage of call sites covered by the tests for each selectors"
+
+	self coverageOfCallSites.
+	self percentageOfWorkingTestsAsSpiderChart
 ]
 
 { #category : 'accessing' }
-ReflectionMutationAnalyser >> selectorsToMutate [
+DynamiqueReflectionMutationAnalyser >> selectorsToMutate [
 
 	^ selectorsToMutate
 ]
 
 { #category : 'accessing' }
-ReflectionMutationAnalyser >> selectorsToMutate: anObject [
+DynamiqueReflectionMutationAnalyser >> selectorsToMutate: anObject [
 
 	selectorsToMutate := anObject
 ]
