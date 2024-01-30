@@ -1,1 +1,1 @@
-Package { #name : #MutationTestingForReflection }
+Package { #name : 'MutationTestingForReflection' }

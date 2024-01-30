@@ -13,7 +13,7 @@ analyser exportForUpsetWithSuffix: 'STON'.
 
 "
 Class {
-	#name : 'ReflectionMutationAnalyser',
+	#name : 'DynamicReflectionMutationAnalyser',
 	#superclass : 'Object',
 	#instVars : [
 		'selectorsToMutate',
@@ -21,21 +21,47 @@ Class {
 		'correspondingTests',
 		'analysis',
 		'aliveMutants',
-		'killedOrTerminatedMutants'
+		'killedOrTerminatedMutants',
+		'alive',
+		'killedTerminated',
+		'allMutants'
 	],
 	#category : 'MutationTestingForReflection',
 	#package : 'MutationTestingForReflection'
 }
 
-{ #category : 'accessing' }
-ReflectionMutationAnalyser >> aliveMutants [
+{ #category : 'tests - printing' }
+DynamicReflectionMutationAnalyser class >> duplicateReflectiveMethodsWithPrefix [
 
-	^ aliveMutants ifNil: [
-		  aliveMutants := analysis generalResult aliveMutants ]
+	| allReflectiveMethods duplicated nonDuplicated prefixedMethod |
+	allReflectiveMethods := ((Pragma allNamed: 'reflection:') collect:
+		                         #method) reject: #isFromTrait.
+	"duplicated  := ((Pragma allNamed: 'prefixedReflectiveMethodProxy') collect:
+		                         #method) reject: #isFromTrait."
+	" ((Pragma allNamed: 'prefixedReflectiveMethodProxy')
+		                            collect: #method) reject: #isFromTrait."
+	"nonDuplicated := allReflectiveMethods reject: [:each | (duplicated select: [ :d | d methodClass = each methodClass ] thenCollect: [:d | d selector]) includes: ( self prefix, each selector) ].
+	nonDuplicated"
+	allReflectiveMethods do: [ :method |
+		prefixedMethod := method prefixedProxyMethod.
+		prefixedMethod methodClass
+			addSelectorSilently: prefixedMethod selector
+			withMethod: prefixedMethod ]
+]
+
+{ #category : 'tests - printing' }
+DynamicReflectionMutationAnalyser class >> prefix [
+	^ AddPrefixToSelectorsMutantOperator prefix
 ]
 
 { #category : 'accessing' }
-ReflectionMutationAnalyser >> allMutants [
+DynamicReflectionMutationAnalyser >> aliveMutants [
+
+	^ analysis generalResult aliveMutants
+]
+
+{ #category : 'accessing' }
+DynamicReflectionMutationAnalyser >> allMutants [
 
 	| allMutants |
 	allMutants := self aliveMutants copy.
@@ -44,31 +70,31 @@ ReflectionMutationAnalyser >> allMutants [
 ]
 
 { #category : 'accessing' }
-ReflectionMutationAnalyser >> classesToStudy [
+DynamicReflectionMutationAnalyser >> classesToStudy [
 
 	^ classesToStudy
 ]
 
 { #category : 'accessing' }
-ReflectionMutationAnalyser >> classesToStudy: anObject [
+DynamicReflectionMutationAnalyser >> classesToStudy: anObject [
 
 	classesToStudy := anObject
 ]
 
 { #category : 'accessing' }
-ReflectionMutationAnalyser >> correspondingTests [
+DynamicReflectionMutationAnalyser >> correspondingTests [
 
 	^ correspondingTests
 ]
 
 { #category : 'accessing' }
-ReflectionMutationAnalyser >> correspondingTests: anObject [
+DynamicReflectionMutationAnalyser >> correspondingTests: anObject [
 
 	correspondingTests := anObject
 ]
 
 { #category : 'as yet unclassified' }
-ReflectionMutationAnalyser >> coverageOfCallSites [
+DynamicReflectionMutationAnalyser >> coverageOfCallSites [
 
 	| coverage spiderChartCoveredSites |
 	coverage := (self allMutants groupedBy: [ :each |
@@ -86,7 +112,7 @@ ReflectionMutationAnalyser >> coverageOfCallSites [
 ]
 
 { #category : 'export' }
-ReflectionMutationAnalyser >> exportForUpsetWithSuffix: aSuffix [
+DynamicReflectionMutationAnalyser >> exportForUpsetWithSuffix: aSuffix [
 
 	| setOfFailingTests testCases tests mutations coveredMutation mutationNames fileRef |
 	coveredMutation := (self allMutants select: [ :each |
@@ -141,7 +167,7 @@ ReflectionMutationAnalyser >> exportForUpsetWithSuffix: aSuffix [
 ]
 
 { #category : 'accessing' }
-ReflectionMutationAnalyser >> killedOrTerminatedMutants [
+DynamicReflectionMutationAnalyser >> killedOrTerminatedMutants [
 
 	^ killedOrTerminatedMutants ifNil: [
 		  killedOrTerminatedMutants := analysis generalResult
@@ -149,7 +175,7 @@ ReflectionMutationAnalyser >> killedOrTerminatedMutants [
 ]
 
 { #category : 'as yet unclassified' }
-ReflectionMutationAnalyser >> percentageOfWorkingTestsAsSpiderChart [
+DynamicReflectionMutationAnalyser >> percentageOfWorkingTestsAsSpiderChart [
 	"Covered mutations grouped by selector compared to the whole list of tests. We want to be able to get a better of how each selector is impacting the WHOLE project and not only the tests it is part of."
 
 	| coveredMutation spiderChartWorkingTests |
@@ -171,34 +197,75 @@ ReflectionMutationAnalyser >> percentageOfWorkingTestsAsSpiderChart [
 ]
 
 { #category : 'running' }
-ReflectionMutationAnalyser >> run [ 
-|mutations alive killedTerminated allMutants coverage |
-mutations := selectorsToMutate collect: [:each | AddPrefixToSelectorsMutantOperator newWithSelector: each].
-analysis := MutationTestingAnalysis
-    testCasesFrom: correspondingTests 
-    mutating: classesToStudy 
-    using: mutations
-"	 with: AllTestsMethodsRunningMutantEvaluationStrategy new."
-    with: SelectingFromCoverageMutantEvaluationStrategy new.
-analysis run.
+DynamicReflectionMutationAnalyser >> run [
 
-alive := self aliveMutants.
-killedTerminated := self killedOrTerminatedMutants.
-allMutants := self allMutants.
+	| mutations selectorImplementors allReflectiveMethods haltVar |
+	alive := Dictionary new.
+	killedTerminated := Dictionary new.
+	allMutants := Dictionary new.
+	haltVar := false.
+	self class duplicateReflectiveMethodsWithPrefix.
+	1 halt.
 
-"Percentage of call sites covered by the tests for each selectors"
-self coverageOfCallSites.
-self percentageOfWorkingTestsAsSpiderChart.
+	allReflectiveMethods := ((Pragma allNamed: 'reflection:') collect:
+		                         #method) reject: #isFromTrait.
+	analysis := MutationTestingAnalysis
+		            testCasesFrom: correspondingTests
+		            mutating: classesToStudy
+		            using: {  }
+		            with: SelectingFromCoverageMutantEvaluationStrategy new.
+	analysis run1InitialTestRunAndCoverage.
+	Transcript crShow: '--- START ---'.
+	selectorsToMutate do: [ :selector |
+		Transcript crShow: selector.
+		"self halt."
+		analysis operators:
+			{ (AddPrefixToSelectorsMutantOperator newWithSelector: selector) }.
+		analysis run2GenerateMutations.
+			
+		selectorImplementors := allReflectiveMethods select: [ :each |
+			                        each selector = selector ].
+		selectorImplementors do: [ :selectorImplementor |
+			| newMethod |
+			newMethod := selectorImplementor prefixedFailingMethod.
+			newMethod methodClass
+				addSelectorSilently: newMethod selector
+				withMethod: newMethod.
+			Transcript crShow:
+				(selectorImplementor methodClass asString , '>>' , selector).
+			analysis run3GenerateResults.
+			"self haltIf: [ haltVar ]."
+			alive at: selectorImplementor put: analysis generalResult aliveMutants copy.
+			killedTerminated
+				at: selectorImplementor
+				put: analysis generalResult killedOrTerminatedMutants copy.
+			newMethod := selectorImplementor prefixedProxyMethod.
+			newMethod methodClass
+				addSelectorSilently: newMethod selector
+				withMethod: newMethod ] ].
+	"Percentage of call sites covered by the tests for each selectors"
+
+	self coverageOfCallSites.
+	self percentageOfWorkingTestsAsSpiderChart
 ]
 
 { #category : 'accessing' }
-ReflectionMutationAnalyser >> selectorsToMutate [
+DynamicReflectionMutationAnalyser >> selectorsToMutate [
 
 	^ selectorsToMutate
 ]
 
 { #category : 'accessing' }
-ReflectionMutationAnalyser >> selectorsToMutate: anObject [
+DynamicReflectionMutationAnalyser >> selectorsToMutate: anObject [
 
 	selectorsToMutate := anObject
+]
+
+{ #category : 'as yet unclassified' }
+DynamicReflectionMutationAnalyser >> selectorsToMutateAuto [
+	
+	| reflectiveSelectors usedSelectors |
+	reflectiveSelectors := ((((Pragma allNamed: 'reflection:') collect: #method) reject: #isFromTrait) collect: #selector) asSet.
+	usedSelectors := classesToStudy flatCollect: [ :eachClass | eachClass methods flatCollect: #messages].
+	selectorsToMutate := reflectiveSelectors select: [ :each | usedSelectors includes: each ] 
 ]
