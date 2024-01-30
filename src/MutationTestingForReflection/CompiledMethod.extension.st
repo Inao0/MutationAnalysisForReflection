@@ -21,13 +21,13 @@ CompiledMethod >> prefixedProxyMethod [
 
 	| astCopy astParsedMethod|
 	astCopy := self ast copy.
-	astParsedMethod := (OpalCompiler new parse: ('method <prefixedReflectiveMethodProxy>
+	astParsedMethod := (OpalCompiler new parse: ('___', astCopy selectorAndArgumentNames ,' <prefixedReflectiveMethodProxy>
 	^ self ' ,  astCopy selectorAndArgumentNames )).
 	astCopy 
 		selector: ('___', astCopy selector );
 		removePragmaNamed: #reflection: ; 
 		addPragma: (astParsedMethod pragmaNamed: #prefixedReflectiveMethodProxy)  ;
 		body: astParsedMethod body;
-		source: astCopy reformatSource.
+		source: astParsedMethod reformatSource.
 	^ astCopy generateMethod 
 ]

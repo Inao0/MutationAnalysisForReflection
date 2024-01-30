@@ -9,26 +9,13 @@ Class {
 }
 
 { #category : 'instance creation' }
-DynamiqueReflectiveMethodFailMutantOperator class >> newWithSelector: aSelector [
-	^ self new oldSelector: aSelector
+DynamiqueReflectiveMethodFailMutantOperator class >> newWithMethod: aMethod [
+	1 halt.
+	"allReflectiveMethods first prefixedFailingMethod"
+	"^ self new oldSelector: aSelector"
 ]
 
 { #category : 'tests - printing' }
 DynamiqueReflectiveMethodFailMutantOperator class >> prefix [
 	^ #___
-]
-
-{ #category : 'accessing' }
-DynamiqueReflectiveMethodFailMutantOperator >> newSelector [
-	^ (self prefix, oldSelector ) asSymbol 
-]
-
-{ #category : 'accessing' }
-DynamiqueReflectiveMethodFailMutantOperator >> oldSelector [
-	^ oldSelector 
-]
-
-{ #category : 'accessing' }
-DynamiqueReflectiveMethodFailMutantOperator >> oldSelector: aSelector [
-	oldSelector := aSelector 
 ]
