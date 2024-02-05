@@ -22,36 +22,86 @@ Class {
 		'analysis',
 		'aliveMutants',
 		'killedOrTerminatedMutants',
-		'alive',
-		'killedTerminated',
-		'allMutants'
+		'allMutants',
+		'callSiteCancellingAlive',
+		'callSiteCancellingKilledOrTerminated'
 	],
 	#category : 'MutationTestingForReflection',
 	#package : 'MutationTestingForReflection'
 }
 
 { #category : 'tests - printing' }
-DynamicReflectionMutationAnalyser class >> duplicateReflectiveMethodsWithPrefix [
+DynamicReflectionMutationAnalyser class >> duplicateMethodsWithReflectiveSelectors [
 
-	| allReflectiveMethods duplicated nonDuplicated prefixedMethod |
-	allReflectiveMethods := ((Pragma allNamed: 'reflection:') collect:
-		                         #method) reject: #isFromTrait.
-	"duplicated  := ((Pragma allNamed: 'prefixedReflectiveMethodProxy') collect:
-		                         #method) reject: #isFromTrait."
-	" ((Pragma allNamed: 'prefixedReflectiveMethodProxy')
-		                            collect: #method) reject: #isFromTrait."
-	"nonDuplicated := allReflectiveMethods reject: [:each | (duplicated select: [ :d | d methodClass = each methodClass ] thenCollect: [:d | d selector]) includes: ( self prefix, each selector) ].
-	nonDuplicated"
-	allReflectiveMethods do: [ :method |
+	| reflectiveSelectors duplicated nonDuplicated prefixedMethod allMethodsToDuplicate|
+
+	reflectiveSelectors := ((((Pragma allNamed: 'reflection:') collect:
+	                          #method) reject: #isFromTrait) collect:
+	                        #selector) asSet.
+
+	allMethodsToDuplicate := (reflectiveSelectors 
+		                                flatCollect: #implementors) reject: #isFromTrait.
+		
+	allMethodsToDuplicate do: [ :method |
 		prefixedMethod := method prefixedProxyMethod.
 		prefixedMethod methodClass
 			addSelectorSilently: prefixedMethod selector
 			withMethod: prefixedMethod ]
 ]
 
+{ #category : 'as yet unclassified' }
+DynamicReflectionMutationAnalyser class >> percentageOfPolymorphismWithBaseLevel [
+
+	| reflectiveSelectors baseLevelPoymorphicSelectors dueToRing dueToASTOrRingOrRefactoring percentageOfBaseLevelPolymorphism |
+	reflectiveSelectors := ((((Pragma allNamed: 'reflection:') collect:
+		                          #method) reject: #isFromTrait) collect:
+		                        #selector) asSet.
+
+	baseLevelPoymorphicSelectors := reflectiveSelectors
+		                                select: [ :each |
+			                                each implementors anySatisfy: [
+				                                :imp |
+				                                (imp pragmaAt: #reflection:) isNil ] ]
+		                                thenCollect: [ :each |
+			                                each
+			                                ->
+				                                (each implementors select: [ :imp |
+					                                 (imp pragmaAt: #reflection:)
+						                                 isNil ]) ].
+
+	dueToRing := baseLevelPoymorphicSelectors select: [ :each |
+		             each value allSatisfy: [ :meth |
+			             meth package name includesSubstring: 'Ring' ] ].
+
+	dueToASTOrRingOrRefactoring := baseLevelPoymorphicSelectors select: [
+		                               :each |
+		                               each value allSatisfy: [ :meth |
+			                               (meth package name beginsWith: 'AST')
+				                               or: [
+					                               (meth package name
+						                                includesSubstring: 'Ring') or: [
+						                               meth package name
+							                               includesSubstring: 'Refactoring' ] ] ] ].
+
+	percentageOfBaseLevelPolymorphism := baseLevelPoymorphicSelectors
+		                                     size / reflectiveSelectors size
+	                                     * 100 asFloat.
+	^ percentageOfBaseLevelPolymorphism
+]
+
 { #category : 'tests - printing' }
 DynamicReflectionMutationAnalyser class >> prefix [
 	^ AddPrefixToSelectorsMutantOperator prefix
+]
+
+{ #category : 'tests - printing' }
+DynamicReflectionMutationAnalyser class >> removeDuplicateMethodsWithPrefix [
+
+	| allReflectiveMethods duplicated nonDuplicated prefixedMethod |
+	duplicated := ((Pragma allNamed: 'prefixedReflectiveMethodProxy') collect:
+		                         #method).
+	duplicated do: [ :each | each methodClass removeSelector: each selector].
+	
 ]
 
 { #category : 'accessing' }
@@ -67,6 +117,296 @@ DynamicReflectionMutationAnalyser >> allMutants [
 	allMutants := self aliveMutants copy.
 	allMutants addAll: self killedOrTerminatedMutants.
 	^ allMutants
+]
+
+{ #category : 'visualization' }
+DynamicReflectionMutationAnalyser >> buildDataStructureFromData [
+
+	|  legendDict dataStructure callSite block cancelSiteBlock |
+
+	dataStructure := Dictionary new.
+	block := [ :failedMethod :mutants | |methodDict|
+		methodDict := (dataStructure
+				  at: failedMethod selector
+				  ifAbsentPut: Dictionary new).
+		mutants do: [ :mutant |
+			( methodDict
+				 at: mutant callSite
+				 ifAbsentPut: IdentityDictionary new) at: failedMethod put: mutant. ] ].
+	aliveMutants keysAndValuesDo: block.
+	killedOrTerminatedMutants keysAndValuesDo: block.
+	cancelSiteBlock:=[ :each | 
+		(dataStructure at: each mutant operator oldSelector) keys 
+			detect: [ :dsCallSite| dsCallSite = each callSite]
+			ifFound: [ :dsCallSite| "1 haltIf: [each callSite method =  (WANavigationBar>>#renderContentOn:) ]." dsCallSite resultFromv1: each ]
+			 	ifNone: [ "1 haltIf: [each callSite method =  (WANavigationBar>>#renderContentOn:) ]." (dataStructure at: each mutant operator oldSelector) at: (each callSite resultFromv1: each) put: Dictionary new ]].
+	callSiteCancellingAlive do: cancelSiteBlock.
+	callSiteCancellingKilledOrTerminated do: cancelSiteBlock.
+	self assert: (dataStructure values allSatisfy: [ :each | each keys allSatisfy: [ :e | e resultFromv1 haltIfNil. e resultFromv1 isNotNil] ] ).
+	^ dataStructure 
+]
+
+{ #category : 'visualization' }
+DynamicReflectionMutationAnalyser >> callSiteCoverageBySelectorsV1 [
+
+	| chart lb methodNotCovered methodCovered legendDict groupedBySelectors methodNotCoveredBySelectors callSiteNotCoveredBySelectors coveredBySelectors |
+	methodNotCovered := callSiteCancellingAlive select: [ :each |
+		                    each runCount isZero ].
+	methodCovered := callSiteCancellingAlive difference: methodNotCovered.
+	legendDict := {
+		              (#methodNotCovered -> 'Method not covered').
+		              (#callSiteNotCovered -> 'Call-site not covered').
+		              (#covered
+		               -> 'Call-site Covered') } asDictionary.
+	groupedBySelectors := (selectorsToMutate collect: [ :sel |
+		                       sel -> {
+			                       (#methodNotCovered
+			                        -> (methodNotCovered select: [ :each |
+					                         each mutant operator oldSelector = sel ])).
+			                       (#callSiteNotCovered
+			                        -> (methodCovered select: [ :each |
+					                         each mutant operator oldSelector = sel ])).
+			                       (#covered
+			                        ->
+				                        (callSiteCancellingKilledOrTerminated select: [ :each |
+					                         each mutant operator oldSelector = sel ])) }
+			                       asDictionary ]) asOrderedDictionary.
+	chart := RSCompositeChart new.
+	chart extent: 600 @ 300.
+	methodNotCoveredBySelectors := ((groupedBySelectors collect: [ :each |
+		                                each at: #methodNotCovered ]) values) collect: #size.
+	callSiteNotCoveredBySelectors := ((groupedBySelectors collect: [ :each |
+		                                  each at: #callSiteNotCovered ])
+		                                 values) collect: #size.
+	coveredBySelectors := ((groupedBySelectors collect: [ :each |
+		                       each at: #covered ]) values) collect: #size.
+	chart add: (RSAbstractChart barHeights: methodNotCoveredBySelectors).
+	chart add:
+		((RSAbstractChart barHeights: callSiteNotCoveredBySelectors)
+			 bottom: methodNotCoveredBySelectors).
+	chart add:
+		((RSAbstractChart barHeights: coveredBySelectors)
+			 bottom: methodNotCoveredBySelectors + callSiteNotCoveredBySelectors).
+	chart horizontalTick fromNames: groupedBySelectors keys.
+   chart horizontalTick useVerticalLabel.
+	chart verticalTick integer.
+	chart ylabel: 'Scores'.
+	chart title: 'Scores by group of gender'.
+	chart build.
+	lb := RSLegend new.
+	lb layout horizontal.
+	#(#methodNotCovered #callSiteNotCovered #covered ) doWithIndex: [ :lbl :index |
+		lb text: (legendDict at: lbl) withBoxColor: (chart plots at: index) computeColor ].
+	lb container: chart canvas.
+	lb build.
+	chart canvas inspect.
+	^ chart canvas
+]
+
+{ #category : 'visualization' }
+DynamicReflectionMutationAnalyser >> callSiteCoverageBySelectorsV2 [
+
+	| dataStructure chart lb legendDict groupedBySelectors methodNotCoveredBySelectors callSiteNotCoveredBySelectors coveredBySelectors baseBySelectors polymorphicBySelectors reflectiveBySelector|
+	dataStructure := self buildDataStructureFromData.
+	legendDict := {
+		              (#methodNotCovered -> 'Method not covered').
+		              (#callSiteNotCovered -> 'Call-site not covered').
+		              (#baseLevel -> 'Base Level').
+						  (#polymorphism -> 'Polymorphic').
+						  (#reflective -> 'Reflective level'). } asDictionary.
+	groupedBySelectors := Dictionary new.
+	dataStructure keysAndValuesDo: [ :sel :callSites | |methodNotCovered callSiteNotCovered killedV1CallSites baseLevel NonBaseLevel reflective polymorphic|
+		methodNotCovered := callSites keys select: [ :e |  e resultFromv1 runCount = 0  ].
+	   callSiteNotCovered := callSites keys select: [ :e |  e resultFromv1 runCount > 0 and: [e resultFromv1 survived ]].
+		killedV1CallSites := callSites keys select: [ :e |  e resultFromv1 runCount > 0 and: [e resultFromv1 survived not ]].
+		baseLevel := killedV1CallSites select: [ :each | ((dataStructure at: each selector) at: each) allSatisfy: [:e | e survived ]].
+		NonBaseLevel := killedV1CallSites difference: baseLevel.
+		reflective :=  NonBaseLevel select: [ :each | |v1FailedTest|
+		v1FailedTest := Dictionary newFrom: (each resultFromv1 result defects collect: [:e | (e asString) -> false]).
+		((dataStructure at: each selector) at: each) do: [:e | e result defects do: [ :test |  v1FailedTest at: (test asString) put: true]].
+		v1FailedTest values allSatisfy:[:e |e] 		
+		].
+		polymorphic := killedV1CallSites difference: (baseLevel union: reflective).
+		groupedBySelectors at: sel put:
+		 {(#methodNotCovered -> methodNotCovered).
+			(#callSiteNotCovered -> callSiteNotCovered).
+			(#baseLevel ->baseLevel).
+			(#polymorphism -> polymorphic).
+			(#reflective -> reflective )} asDictionary ]. 
+
+	chart := RSCompositeChart new.
+	chart extent: 600 @ 300.
+	methodNotCoveredBySelectors := ((groupedBySelectors collect: [ :each |
+		                                each at: #methodNotCovered ]) values) collect: #size.
+	callSiteNotCoveredBySelectors := ((groupedBySelectors collect: [ :each |
+		                                  each at: #callSiteNotCovered ])
+		                                 values) collect: #size.
+	baseBySelectors := ((groupedBySelectors collect: [ :each |
+		                       each at: #baseLevel ]) values) collect: #size.
+	polymorphicBySelectors := ((groupedBySelectors collect: [ :each |
+		                       each at: #polymorphism ]) values) collect: #size.
+	reflectiveBySelector := ((groupedBySelectors collect: [ :each |
+		                       each at: #reflective ]) values) collect: #size.
+	chart add: (RSAbstractChart barHeights: methodNotCoveredBySelectors).
+	chart add:
+		((RSAbstractChart barHeights: callSiteNotCoveredBySelectors)
+			 bottom: methodNotCoveredBySelectors).
+	chart add:
+		((RSAbstractChart barHeights: baseBySelectors)
+			 bottom: callSiteNotCoveredBySelectors + methodNotCoveredBySelectors).
+	chart add:
+		((RSAbstractChart barHeights: polymorphicBySelectors )
+			 bottom: callSiteNotCoveredBySelectors + methodNotCoveredBySelectors + baseBySelectors ).
+	chart add:
+		((RSAbstractChart barHeights: reflectiveBySelector )
+			 bottom:  callSiteNotCoveredBySelectors + methodNotCoveredBySelectors + baseBySelectors + polymorphicBySelectors ).
+			
+	chart horizontalTick fromNames: groupedBySelectors keys.
+   chart horizontalTick useVerticalLabel.
+	chart verticalTick integer.
+	chart ylabel: 'Nb of callsites'.
+	chart title: 'Call-site analysis by selector'.
+	chart build.
+	lb := RSLegend new.
+	lb layout horizontal.
+	#(#methodNotCovered #callSiteNotCovered #baseLevel #polymorphism #reflective ) doWithIndex: [ :lbl :index |
+		lb text: (legendDict at: lbl) withBoxColor: (chart plots at: index) computeColor ].
+	lb container: chart canvas.
+	lb build.
+	chart canvas inspect.
+	^ chart canvas
+]
+
+{ #category : 'visualization' }
+DynamicReflectionMutationAnalyser >> callSiteCoveragePieChartV1 [
+
+	| methodNotCovered methodCovered legendDict pie pieLabel pieTitle |
+	methodNotCovered := callSiteCancellingAlive select: [ :each |
+		                    each runCount isZero ].
+	methodCovered := callSiteCancellingAlive difference: methodNotCovered.
+	legendDict := {
+		              (methodNotCovered -> 'Method not covered').
+		              (methodCovered -> 'Call-site not covered').
+		              (callSiteCancellingKilledOrTerminated
+		               -> 'Call-site Covered') } asDictionary.
+
+	pie := RSPie new
+		       objects: {
+				       methodNotCovered.
+				       methodCovered.
+				       callSiteCancellingKilledOrTerminated };
+		       slice: #size;
+		       yourself.
+	pie sliceColor: RSColorPalette sequential blues3.
+	pie build.
+	pie canvas zoomToFit.
+
+	pieLabel := RSPieLabeledInteraction new.
+	pieLabel labelShape
+		fontSize: 10;
+		fontName: 'Source Code Pro'.
+	pieLabel
+		labelColor: Color black;
+		labelText: [ :obj | legendDict at: obj ];
+		rotated;
+		offset: 60.
+	pieTitle := RSPieTitleInteraction new.
+	pieTitle labelShape
+		fontSize: 20;
+		color: Color darkGray;
+		position: 0 @ (pie canvas extent y / 2) negated.
+	pieTitle labelText: 'Call-Sites Analysis'.
+
+
+	pie shapes @ pieLabel.
+	pie canvas @ pieTitle.
+	pie canvas zoomToFit.
+
+	pie canvas inspect.
+]
+
+{ #category : 'visualization' }
+DynamicReflectionMutationAnalyser >> callSiteCoveragePieChartV2 [
+
+	| methodNotCovered callSiteNotCovered killedV1CallSites baseLevel NonBaseLevel polymorphic reflective legendDict pie pieLabel pieTitle dataStructure|
+	dataStructure := self buildDataStructureFromData.
+	methodNotCovered := dataStructure flatCollect: [ :each | each keys select: [ :e |  e resultFromv1 runCount = 0  ] ].
+	callSiteNotCovered := dataStructure flatCollect: [ :each | each keys select: [ :e |  e resultFromv1 runCount > 0 and: [e resultFromv1 survived ]]].
+	killedV1CallSites := dataStructure flatCollect: [ :each | each keys select: [ :e |  e resultFromv1 runCount > 0 and: [e resultFromv1 survived not ]]].
+	baseLevel := killedV1CallSites select: [ :each | ((dataStructure at: each selector) at: each) allSatisfy: [:e | e survived ]].
+	NonBaseLevel := killedV1CallSites difference: baseLevel.
+	reflective :=  NonBaseLevel select: [ :each | |v1FailedTest|
+		v1FailedTest := Dictionary newFrom: (each resultFromv1 result defects collect: [:e | (e asString) -> false]).
+		((dataStructure at: each selector) at: each) do: [:e | e result defects do: [ :test |  v1FailedTest at: (test asString) put: true]].
+		v1FailedTest values allSatisfy:[:e |e] 		
+		].
+	polymorphic := killedV1CallSites difference: (baseLevel union: reflective).
+	legendDict := { methodNotCovered -> 'Method not covered' .
+	 	callSiteNotCovered -> 'Callsite not covered' .
+	 	baseLevel -> 'Base Level' .
+	 	polymorphic -> 'Polymorphic' .
+		reflective -> 'Reflective Level'} asDictionary.
+	pie := RSPie new
+		       objects: {
+				       methodNotCovered.
+				       callSiteNotCovered.
+				       baseLevel.
+				       polymorphic.
+				       reflective };
+		       slice: #size;
+		       yourself.
+	pie sliceColor: RSColorPalette sequential blues5.
+	pie build.
+	pie canvas zoomToFit.
+
+	pieLabel := RSPieLabeledInteraction new.
+	pieLabel labelShape
+		fontSize: 10;
+		fontName: 'Source Code Pro'.
+	pieLabel
+		labelColor: Color black;
+		labelText: [ :obj | legendDict at: obj ];
+		rotated;
+		offset: 60.
+	pieTitle := RSPieTitleInteraction new.
+	pieTitle labelShape
+		fontSize: 20;
+		color: Color darkGray;
+		position: 0 @ (pie canvas extent y / 2) negated.
+	pieTitle labelText: 'Call-Sites Analysis'.
+
+
+	pie shapes @ pieLabel.
+	pie canvas @ pieTitle.
+	pie canvas zoomToFit.
+"	pie shapes
+		select: [ :s | { baseLevel . polymorphic . reflective }  includes: s model]
+		thenDo: [ :s | s emphasizeWith: 20 ]."
+	pie canvas inspect.
+]
+
+{ #category : 'visualization' }
+DynamicReflectionMutationAnalyser >> callSitesStats [
+
+	| v1analyser pie methodNotCovered methodCovered pieLabel pieTitle legendDict |
+	"callSiteCancellingKilledOrTerminated := nil. callSiteCancellingAlive:= nil
+	"
+	callSiteCancellingAlive ifNil: [
+		v1analyser := ReflectionMutationAnalyser new.
+		v1analyser
+			classesToStudy: classesToStudy;
+			correspondingTests: correspondingTests;
+			selectorsToMutate: selectorsToMutate.
+		v1analyser run.
+
+		callSiteCancellingAlive := v1analyser aliveMutants.
+		callSiteCancellingKilledOrTerminated := v1analyser
+			                                        killedOrTerminatedMutants ].
+		self callSiteCoveragePieChartV1.
+		self callSiteCoverageBySelectorsV1.
+		self callSiteCoveragePieChartV2.
+		self callSiteCoverageBySelectorsV2.
+	
 ]
 
 { #category : 'accessing' }
@@ -93,7 +433,7 @@ DynamicReflectionMutationAnalyser >> correspondingTests: anObject [
 	correspondingTests := anObject
 ]
 
-{ #category : 'as yet unclassified' }
+{ #category : 'visualization' }
 DynamicReflectionMutationAnalyser >> coverageOfCallSites [
 
 	| coverage spiderChartCoveredSites |
@@ -174,7 +514,7 @@ DynamicReflectionMutationAnalyser >> killedOrTerminatedMutants [
 			                               killedOrTerminatedMutants ]
 ]
 
-{ #category : 'as yet unclassified' }
+{ #category : 'visualization' }
 DynamicReflectionMutationAnalyser >> percentageOfWorkingTestsAsSpiderChart [
 	"Covered mutations grouped by selector compared to the whole list of tests. We want to be able to get a better of how each selector is impacting the WHOLE project and not only the tests it is part of."
 
@@ -200,12 +540,11 @@ DynamicReflectionMutationAnalyser >> percentageOfWorkingTestsAsSpiderChart [
 DynamicReflectionMutationAnalyser >> run [
 
 	| mutations selectorImplementors allReflectiveMethods haltVar |
-	alive := Dictionary new.
-	killedTerminated := Dictionary new.
-	allMutants := Dictionary new.
-	haltVar := false.
-	self class duplicateReflectiveMethodsWithPrefix.
-	1 halt.
+	aliveMutants := IdentityDictionary new.
+	killedOrTerminatedMutants := IdentityDictionary new.
+	allMutants := IdentityDictionary new.
+	haltVar := true.
+	self class duplicateMethodsWithReflectiveSelectors.
 
 	allReflectiveMethods := ((Pragma allNamed: 'reflection:') collect:
 		                         #method) reject: #isFromTrait.
@@ -222,7 +561,10 @@ DynamicReflectionMutationAnalyser >> run [
 		analysis operators:
 			{ (AddPrefixToSelectorsMutantOperator newWithSelector: selector) }.
 		analysis run2GenerateMutations.
-			
+		"Filtering out mutation on our generated methods"
+		analysis mutations: (analysis mutations reject: [:each | each originalMethod hasPragmaNamed: #prefixedReflectiveMethodProxy]).
+		" WANavigationBar>>#renderContentOn:"
+		"1 haltIf: [ selector = #numArgs ]."
 		selectorImplementors := allReflectiveMethods select: [ :each |
 			                        each selector = selector ].
 		selectorImplementors do: [ :selectorImplementor |
@@ -234,9 +576,9 @@ DynamicReflectionMutationAnalyser >> run [
 			Transcript crShow:
 				(selectorImplementor methodClass asString , '>>' , selector).
 			analysis run3GenerateResults.
-			"self haltIf: [ haltVar ]."
-			alive at: selectorImplementor put: analysis generalResult aliveMutants copy.
-			killedTerminated
+			"self haltIf: [ analysis generalResult killedOrTerminatedMutants isNotEmpty ]."
+			aliveMutants at: selectorImplementor put: analysis generalResult aliveMutants copy.
+			killedOrTerminatedMutants
 				at: selectorImplementor
 				put: analysis generalResult killedOrTerminatedMutants copy.
 			newMethod := selectorImplementor prefixedProxyMethod.
@@ -244,8 +586,8 @@ DynamicReflectionMutationAnalyser >> run [
 				addSelectorSilently: newMethod selector
 				withMethod: newMethod ] ].
 	"Percentage of call sites covered by the tests for each selectors"
-
-	self coverageOfCallSites.
+	self class removeDuplicateMethodsWithPrefix. 
+	self callSitesStats.
 	self percentageOfWorkingTestsAsSpiderChart
 ]
 

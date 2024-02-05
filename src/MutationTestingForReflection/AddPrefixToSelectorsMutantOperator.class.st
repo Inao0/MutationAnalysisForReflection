@@ -2,7 +2,8 @@ Class {
 	#name : 'AddPrefixToSelectorsMutantOperator',
 	#superclass : 'SelectorReplacementMutantOperator',
 	#instVars : [
-		'oldSelector'
+		'oldSelector',
+		'prefix'
 	],
 	#category : 'MutationTestingForReflection',
 	#package : 'MutationTestingForReflection'
@@ -19,8 +20,15 @@ AddPrefixToSelectorsMutantOperator class >> prefix [
 ]
 
 { #category : 'accessing' }
+AddPrefixToSelectorsMutantOperator >> initialize [ 
+	super initialize.
+	prefix := self class prefix
+	
+]
+
+{ #category : 'accessing' }
 AddPrefixToSelectorsMutantOperator >> newSelector [
-	^ (self class prefix, oldSelector ) asSymbol 
+	^ (self prefix, oldSelector ) asSymbol 
 ]
 
 { #category : 'accessing' }
@@ -31,4 +39,14 @@ AddPrefixToSelectorsMutantOperator >> oldSelector [
 { #category : 'accessing' }
 AddPrefixToSelectorsMutantOperator >> oldSelector: aSelector [
 	oldSelector := aSelector 
+]
+
+{ #category : 'accessing' }
+AddPrefixToSelectorsMutantOperator >> prefix [
+	^ prefix 
+]
+
+{ #category : 'accessing' }
+AddPrefixToSelectorsMutantOperator >> prefix: aSymbol [
+	prefix := aSymbol 
 ]

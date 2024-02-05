@@ -171,24 +171,27 @@ ReflectionMutationAnalyser >> percentageOfWorkingTestsAsSpiderChart [
 ]
 
 { #category : 'running' }
-ReflectionMutationAnalyser >> run [ 
-|mutations alive killedTerminated allMutants coverage |
-mutations := selectorsToMutate collect: [:each | AddPrefixToSelectorsMutantOperator newWithSelector: each].
-analysis := MutationTestingAnalysis
-    testCasesFrom: correspondingTests 
-    mutating: classesToStudy 
-    using: mutations
-"	 with: AllTestsMethodsRunningMutantEvaluationStrategy new."
-    with: SelectingFromCoverageMutantEvaluationStrategy new.
-analysis run.
+ReflectionMutationAnalyser >> run [
 
-alive := self aliveMutants.
-killedTerminated := self killedOrTerminatedMutants.
-allMutants := self allMutants.
+	| mutations alive killedTerminated allMutants coverage |
+	mutations := selectorsToMutate collect: [ :each |
+		             (AddPrefixToSelectorsMutantOperator newWithSelector:
+			             each) prefix: '_R_' ].
+	analysis := MutationTestingAnalysis
+		            testCasesFrom: correspondingTests
+		            mutating: classesToStudy
+		            using: mutations
+		            with: SelectingFromCoverageMutantEvaluationStrategy new.
+	"	 with: AllTestsMethodsRunningMutantEvaluationStrategy new."
+	analysis run.
 
-"Percentage of call sites covered by the tests for each selectors"
-self coverageOfCallSites.
-self percentageOfWorkingTestsAsSpiderChart.
+	alive := self aliveMutants.
+	killedTerminated := self killedOrTerminatedMutants.
+	allMutants := self allMutants.
+
+	"Percentage of call sites covered by the tests for each selectors"
+"	self coverageOfCallSites.
+	self percentageOfWorkingTestsAsSpiderChart"
 ]
 
 { #category : 'accessing' }
