@@ -563,11 +563,12 @@ DynamicReflectionMutationAnalyser >> run [
 
 	allReflectiveMethods := ((Pragma allNamed: 'reflection:') collect:
 		                         #method) reject: #isFromTrait.
-	analysis := MutationTestingAnalysis
+	analysis := MTAnalysis 
 		            testCasesFrom: correspondingTests
 		            mutating: classesToStudy
 		            using: {  }
-		            with: SelectingFromCoverageMutantEvaluationStrategy new.
+		            with: MTSelectingFromCoverageTestSelectionStrategy new.
+	analysis stopOnErrorOrFail: false.
 	analysis run1InitialTestRunAndCoverage.
 	Transcript crShow: '--- START ---'.
 	selectorsToMutate do: [ :selector |
@@ -590,7 +591,7 @@ DynamicReflectionMutationAnalyser >> run [
 				withMethod: newMethod.
 			Transcript crShow:
 				(selectorImplementor methodClass asString , '>>' , selector).
-			analysis run3GenerateResults.
+			analysis generateResults .
 			"self haltIf: [ analysis generalResult killedOrTerminatedMutants isNotEmpty ]."
 			aliveMutants at: selectorImplementor put: analysis generalResult aliveMutants copy.
 			killedOrTerminatedMutants
@@ -602,8 +603,8 @@ DynamicReflectionMutationAnalyser >> run [
 				withMethod: newMethod ] ].
 	"Percentage of call sites covered by the tests for each selectors"
 	self class removeDuplicateMethodsWithPrefix. 
-	self callSitesStats.
-	self percentageOfWorkingTestsAsSpiderChart
+"	self callSitesStats.
+	self percentageOfWorkingTestsAsSpiderChart"
 ]
 
 { #category : 'accessing' }

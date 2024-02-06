@@ -173,15 +173,15 @@ ReflectionMutationAnalyser >> percentageOfWorkingTestsAsSpiderChart [
 { #category : 'running' }
 ReflectionMutationAnalyser >> run [
 
-	| mutations alive killedTerminated allMutants coverage |
+	| mutations alive killedTerminated allMutants |
 	mutations := selectorsToMutate collect: [ :each |
 		             (AddPrefixToSelectorsMutantOperator newWithSelector:
 			             each) prefix: '_R_' ].
-	analysis := MutationTestingAnalysis
+	analysis := MTAnalysis 
 		            testCasesFrom: correspondingTests
 		            mutating: classesToStudy
 		            using: mutations
-		            with: SelectingFromCoverageMutantEvaluationStrategy new.
+		            with: MTSelectingFromCoverageTestSelectionStrategy new.
 	"	 with: AllTestsMethodsRunningMutantEvaluationStrategy new."
 	analysis run.
 

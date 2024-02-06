@@ -1,6 +1,6 @@
 Class {
 	#name : 'AddPrefixToSelectorsMutantOperator',
-	#superclass : 'SelectorReplacementMutantOperator',
+	#superclass : 'MTSelectorReplacementMutantOperator',
 	#instVars : [
 		'oldSelector',
 		'prefix'
@@ -22,7 +22,8 @@ AddPrefixToSelectorsMutantOperator class >> prefix [
 { #category : 'accessing' }
 AddPrefixToSelectorsMutantOperator >> initialize [ 
 	super initialize.
-	prefix := self class prefix
+	prefix := self class prefix.
+	oldSelector := ''.
 	
 ]
 

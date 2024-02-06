@@ -86,3 +86,22 @@ AnalysisScripts >> settingUpSeaside [
 		 (e name beginsWith: 'Seaside-') and: [
 			 e name includesSubstring: 'Tests' ] ]) do: #demoteToTagInPackage
 ]
+
+{ #category : 'as yet unclassified' }
+AnalysisScripts >> testToSkipForSeaside [
+"	<modifiedTest>
+	self skip."
+ ^ 	{WAContinuationTest>>#testBlockVars .
+	WAContinuationTest>>#testBlockEscape .
+	WAContinuationTest>>#testBlockTemps. 
+	WAContinuationTest>>#testMethodTemps . 
+	WAContinuationTest>>#testReentrant . 
+	WAContinuationTest>>#testSimpleCallCC .
+	WAContinuationTest>>#testSimpleCallCCWithPossibleArgument .
+	WAContinuationTest>>#testSimplestCallCC .
+	WAErrorHandlerTest>>#testWarning .
+	WAErrorHandlerTest>>#testError .
+	WAExceptionHandlerTest>>#testHandlerInstanceValidExceptionSelector.
+ 	WARenderLoopContinuationTest>>#testExceptionHandlerNesting
+	}
+]
