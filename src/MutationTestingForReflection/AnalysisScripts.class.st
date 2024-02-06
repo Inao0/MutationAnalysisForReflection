@@ -57,9 +57,14 @@ allReflectiveMethods first prefixedFailingMethod.
 
 	dynamiqueAnalyser run.
 
+	"Reset seaside class test. Otherwise fails"
+	{
+		WATestingMetadataFileLibrary.
+		WATestingFiles } do: [ :each |
+		each removeSelector: #demoJpeg.
+		each removeSelector: #demoTxt ].
 	dynamiqueAnalyser callSitesStats.
 
-	"Maybe/Probably not working"
 	dynamiqueAnalyser percentageOfWorkingTestsAsSpiderChart.
 	dynamiqueAnalyser exportForUpsetWithSuffix: 'SeasideDyn'
 ]
