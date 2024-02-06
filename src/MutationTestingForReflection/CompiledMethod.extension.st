@@ -10,6 +10,7 @@ CompiledMethod >> prefixedFailingMethod [
 	astCopy 
 		selector: ('___', astCopy selector );
 		removePragmaNamed: #reflection: ; 
+		removePragmaNamed: #primitive: ; 
 		addPragma: (astParsedMethod pragmaNamed: #prefixedReflectiveMethodProxy)  ;
 		body: astParsedMethod body;
 		source: astCopy reformatSource.

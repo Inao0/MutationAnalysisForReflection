@@ -122,28 +122,36 @@ DynamicReflectionMutationAnalyser >> allMutants [
 { #category : 'visualization' }
 DynamicReflectionMutationAnalyser >> buildDataStructureFromData [
 
-	|  legendDict dataStructure callSite block cancelSiteBlock |
-
+	|  dataStructure callSiteCancellingMutantEvals addingMethodCancellingData  |
 	dataStructure := Dictionary new.
-	block := [ :failedMethod :mutants | |methodDict|
-		methodDict := (dataStructure
-				  at: failedMethod selector
-				  ifAbsentPut: Dictionary new).
-		mutants do: [ :mutant |
-			( methodDict
-				 at: mutant callSite
-				 ifAbsentPut: IdentityDictionary new) at: failedMethod put: mutant. ] ].
-	aliveMutants keysAndValuesDo: block.
-	killedOrTerminatedMutants keysAndValuesDo: block.
-	cancelSiteBlock:=[ :each | 
-		(dataStructure at: each mutant operator oldSelector) keys 
-			detect: [ :dsCallSite| dsCallSite = each callSite]
-			ifFound: [ :dsCallSite| "1 haltIf: [each callSite method =  (WANavigationBar>>#renderContentOn:) ]." dsCallSite resultFromv1: each ]
-			 	ifNone: [ "1 haltIf: [each callSite method =  (WANavigationBar>>#renderContentOn:) ]." (dataStructure at: each mutant operator oldSelector) at: (each callSite resultFromv1: each) put: Dictionary new ]].
-	callSiteCancellingAlive do: cancelSiteBlock.
-	callSiteCancellingKilledOrTerminated do: cancelSiteBlock.
-	self assert: (dataStructure values allSatisfy: [ :each | each keys allSatisfy: [ :e | e resultFromv1 haltIfNil. e resultFromv1 isNotNil] ] ).
-	^ dataStructure 
+	callSiteCancellingMutantEvals := {
+		                       callSiteCancellingAlive.
+		                       callSiteCancellingKilledOrTerminated }
+		                       flatCollect: [ :e | e ].
+	callSiteCancellingMutantEvals do: [ :mutantEval |
+		| callSiteDict |
+		callSiteDict := dataStructure
+			                at: mutantEval mutant operator oldSelector
+			                ifAbsentPut: Dictionary new.
+		callSiteDict
+			at: mutantEval callSiteWithResult
+			ifAbsentPut: IdentityDictionary new ].
+
+	addingMethodCancellingData := [ :failedMethod :mutants |
+	         | callSiteDict |
+	         mutants ifNotEmpty: [
+		         callSiteDict := dataStructure at: failedMethod selector.
+		         mutants do: [ :mutant |
+			         (callSiteDict at: mutant callSite)
+				         at: failedMethod
+				         put: mutant ] ] ].
+	aliveMutants keysAndValuesDo: addingMethodCancellingData.
+	killedOrTerminatedMutants keysAndValuesDo: addingMethodCancellingData.
+
+	self assert: (dataStructure values allSatisfy: [ :each |
+			 each keys allSatisfy: [ :e | e resultFromv1 isNotNil ] ]).
+	"dataStructure values select: [ :each | each keys allSatisfy: [ :e | e resultFromv1 isNotNil] ]"
+	^ dataStructure
 ]
 
 { #category : 'visualization' }
@@ -206,7 +214,7 @@ DynamicReflectionMutationAnalyser >> callSiteCoverageBySelectorsV1 [
 { #category : 'visualization' }
 DynamicReflectionMutationAnalyser >> callSiteCoverageBySelectorsV2 [
 
-	| dataStructure chart lb legendDict groupedBySelectors methodNotCoveredBySelectors callSiteNotCoveredBySelectors coveredBySelectors baseBySelectors polymorphicBySelectors reflectiveBySelector|
+	| dataStructure chart lb legendDict groupedBySelectors methodNotCoveredBySelectors callSiteNotCoveredBySelectors baseBySelectors polymorphicBySelectors reflectiveBySelector palette |
 	dataStructure := self buildDataStructureFromData.
 	legendDict := {
 		              (#methodNotCovered -> 'Method not covered').
@@ -214,6 +222,8 @@ DynamicReflectionMutationAnalyser >> callSiteCoverageBySelectorsV2 [
 		              (#baseLevel -> 'Base Level').
 						  (#polymorphism -> 'Polymorphic').
 						  (#reflective -> 'Reflective level'). } asDictionary.
+	
+	palette := RSColorPalette sequential reflectivePalette.
 	groupedBySelectors := Dictionary new.
 	dataStructure keysAndValuesDo: [ :sel :callSites | |methodNotCovered callSiteNotCovered killedV1CallSites baseLevel NonBaseLevel reflective polymorphic|
 		methodNotCovered := callSites keys select: [ :e |  e resultFromv1 runCount = 0  ].
@@ -247,18 +257,23 @@ DynamicReflectionMutationAnalyser >> callSiteCoverageBySelectorsV2 [
 		                       each at: #polymorphism ]) values) collect: #size.
 	reflectiveBySelector := ((groupedBySelectors collect: [ :each |
 		                       each at: #reflective ]) values) collect: #size.
-	chart add: (RSAbstractChart barHeights: methodNotCoveredBySelectors).
+	chart add: ((RSAbstractChart barHeights: methodNotCoveredBySelectors)
+			color: (palette scale: methodNotCoveredBySelectors)).
 	chart add:
 		((RSAbstractChart barHeights: callSiteNotCoveredBySelectors)
+			color: (palette scale: callSiteNotCoveredBySelectors);
 			 bottom: methodNotCoveredBySelectors).
 	chart add:
 		((RSAbstractChart barHeights: baseBySelectors)
+			color: (palette scale: baseBySelectors);
 			 bottom: callSiteNotCoveredBySelectors + methodNotCoveredBySelectors).
 	chart add:
 		((RSAbstractChart barHeights: polymorphicBySelectors )
+			color: (palette scale: polymorphicBySelectors);
 			 bottom: callSiteNotCoveredBySelectors + methodNotCoveredBySelectors + baseBySelectors ).
 	chart add:
 		((RSAbstractChart barHeights: reflectiveBySelector )
+			color: (palette scale: reflectiveBySelector);
 			 bottom:  callSiteNotCoveredBySelectors + methodNotCoveredBySelectors + baseBySelectors + polymorphicBySelectors ).
 			
 	chart horizontalTick fromNames: groupedBySelectors keys.
@@ -270,7 +285,7 @@ DynamicReflectionMutationAnalyser >> callSiteCoverageBySelectorsV2 [
 	lb := RSLegend new.
 	lb layout horizontal.
 	#(#methodNotCovered #callSiteNotCovered #baseLevel #polymorphism #reflective ) doWithIndex: [ :lbl :index |
-		lb text: (legendDict at: lbl) withBoxColor: (chart plots at: index) computeColor ].
+		lb text: (legendDict at: lbl) withBoxColor: (palette scale: index)  ].
 	lb container: chart canvas.
 	lb build.
 	chart canvas inspect.
@@ -297,7 +312,7 @@ DynamicReflectionMutationAnalyser >> callSiteCoveragePieChartV1 [
 				       callSiteCancellingKilledOrTerminated };
 		       slice: #size;
 		       yourself.
-	pie sliceColor: RSColorPalette sequential blues3.
+"	pie sliceColor: RSColorPalette sequential blues3."
 	pie build.
 	pie canvas zoomToFit.
 
@@ -355,7 +370,7 @@ DynamicReflectionMutationAnalyser >> callSiteCoveragePieChartV2 [
 				       reflective };
 		       slice: #size;
 		       yourself.
-	pie sliceColor: RSColorPalette sequential blues5.
+	pie sliceColor: RSColorPalette sequential reflectivePalette.
 	pie build.
 	pie canvas zoomToFit.
 
@@ -402,8 +417,8 @@ DynamicReflectionMutationAnalyser >> callSitesStats [
 		callSiteCancellingAlive := v1analyser aliveMutants.
 		callSiteCancellingKilledOrTerminated := v1analyser
 			                                        killedOrTerminatedMutants ].
-		self callSiteCoveragePieChartV1.
-		self callSiteCoverageBySelectorsV1.
+		"self callSiteCoveragePieChartV1.
+		self callSiteCoverageBySelectorsV1."
 		self callSiteCoveragePieChartV2.
 		self callSiteCoverageBySelectorsV2.
 	

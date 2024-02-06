@@ -15,7 +15,7 @@ Class {
 CallSite >> = aCallSite [
 
 	^ self species == aCallSite species and: [
-		  method = aCallSite method and: [
+		 ( self methodComparison: aCallSite method) and: [
 			  selector = aCallSite selector and: [
 				  nodeNumber = aCallSite nodeNumber ] ] ]
 ]
@@ -23,7 +23,7 @@ CallSite >> = aCallSite [
 { #category : 'comparing' }
 CallSite >> hash [
  
-	^ (method hash bitXor: selector hash) bitXor: nodeNumber hash
+	^ ((method methodClass hash bitXor: method selector hash) bitXor: selector hash) bitXor: nodeNumber hash
 ]
 
 { #category : 'accessing' }
@@ -36,6 +36,18 @@ CallSite >> method [
 CallSite >> method: anObject [
 
 	method := anObject
+]
+
+{ #category : 'Iona' }
+CallSite >> methodComparison: aMethod [ 
+	
+	method == aMethod
+		ifTrue: [ ^ true ].
+	method methodClass = aMethod methodClass
+		ifFalse: [ ^ false ].
+	method selector = aMethod selector
+		ifFalse: [ ^ false ].
+		^ true
 ]
 
 { #category : 'accessing' }
