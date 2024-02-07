@@ -177,11 +177,12 @@ ReflectionMutationAnalyser >> run [
 	mutations := selectorsToMutate collect: [ :each |
 		             (AddPrefixToSelectorsMutantOperator newWithSelector:
 			             each) prefix: '_R_' ].
-	analysis := MTAnalysis 
-		            testCasesFrom: correspondingTests
-		            mutating: classesToStudy
-		            using: mutations
-		            with: MTSelectingFromCoverageTestSelectionStrategy new.
+	analysis := MTAnalysis new
+		            testClasses: correspondingTests;
+		            classesToMutate: classesToStudy;
+		            operators: mutations;
+		            testSelectionStrategy: MTSelectingFromCoverageTestSelectionStrategy new;
+						yourself.
 	"	 with: AllTestsMethodsRunningMutantEvaluationStrategy new."
 	analysis run.
 

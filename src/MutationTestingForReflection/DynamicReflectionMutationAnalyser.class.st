@@ -563,11 +563,12 @@ DynamicReflectionMutationAnalyser >> run [
 
 	allReflectiveMethods := ((Pragma allNamed: 'reflection:') collect:
 		                         #method) reject: #isFromTrait.
-	analysis := MTAnalysis 
-		            testCasesFrom: correspondingTests
-		            mutating: classesToStudy
-		            using: {  }
-		            with: MTSelectingFromCoverageTestSelectionStrategy new.
+	analysis := MTAnalysis new
+		            testClasses: correspondingTests;
+		            classesToMutate: classesToStudy;
+		            operators: {  };
+		            testSelectionStrategy: MTSelectingFromCoverageTestSelectionStrategy new;
+		yourself.
 	analysis stopOnErrorOrFail: false.
 	analysis run1InitialTestRunAndCoverage.
 	Transcript crShow: '--- START ---'.
