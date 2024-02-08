@@ -24,7 +24,8 @@ Class {
 		'killedOrTerminatedMutants',
 		'allMutants',
 		'callSiteCancellingAlive',
-		'callSiteCancellingKilledOrTerminated'
+		'callSiteCancellingKilledOrTerminated',
+		'dataStructure'
 	],
 	#category : 'MutationTestingForReflection',
 	#package : 'MutationTestingForReflection'
@@ -122,7 +123,8 @@ DynamicReflectionMutationAnalyser >> allMutants [
 { #category : 'visualization' }
 DynamicReflectionMutationAnalyser >> buildDataStructureFromData [
 
-	|  dataStructure callSiteCancellingMutantEvals addingMethodCancellingData  |
+	| callSiteCancellingMutantEvals addingMethodCancellingData  |
+	dataStructure ifNotNil: [^dataStructure].  
 	dataStructure := Dictionary new.
 	callSiteCancellingMutantEvals := {
 		                       callSiteCancellingAlive.
@@ -214,8 +216,8 @@ DynamicReflectionMutationAnalyser >> callSiteCoverageBySelectorsV1 [
 { #category : 'visualization' }
 DynamicReflectionMutationAnalyser >> callSiteCoverageBySelectorsV2 [
 
-	| dataStructure chart lb legendDict groupedBySelectors methodNotCoveredBySelectors callSiteNotCoveredBySelectors baseBySelectors polymorphicBySelectors reflectiveBySelector palette |
-	dataStructure := self buildDataStructureFromData.
+	| chart lb legendDict groupedBySelectors methodNotCoveredBySelectors callSiteNotCoveredBySelectors baseBySelectors polymorphicBySelectors reflectiveBySelector palette |
+	self buildDataStructureFromData.
 	legendDict := {
 		              (#methodNotCovered -> 'Method not covered').
 		              (#callSiteNotCovered -> 'Call-site not covered').
@@ -343,8 +345,8 @@ DynamicReflectionMutationAnalyser >> callSiteCoveragePieChartV1 [
 { #category : 'visualization' }
 DynamicReflectionMutationAnalyser >> callSiteCoveragePieChartV2 [
 
-	| methodNotCovered callSiteNotCovered killedV1CallSites baseLevel NonBaseLevel polymorphic reflective legendDict pie pieLabel pieTitle dataStructure|
-	dataStructure := self buildDataStructureFromData.
+	| methodNotCovered callSiteNotCovered killedV1CallSites baseLevel NonBaseLevel polymorphic reflective legendDict pie pieLabel pieTitle |
+	self buildDataStructureFromData.
 	methodNotCovered := dataStructure flatCollect: [ :each | each keys select: [ :e |  e resultFromv1 runCount = 0  ] ].
 	callSiteNotCovered := dataStructure flatCollect: [ :each | each keys select: [ :e |  e resultFromv1 runCount > 0 and: [e resultFromv1 survived ]]].
 	killedV1CallSites := dataStructure flatCollect: [ :each | each keys select: [ :e |  e resultFromv1 runCount > 0 and: [e resultFromv1 survived not ]]].
@@ -529,6 +531,102 @@ DynamicReflectionMutationAnalyser >> killedOrTerminatedMutants [
 			                               killedOrTerminatedMutants ]
 ]
 
+{ #category : 'matrix' }
+DynamicReflectionMutationAnalyser >> matrix [
+
+	| tests builder reflectiveMethods array reflectiveCategories |
+	tests := (analysis testCases collect: [ :each | each testCase ])
+		         groupedBy: [ :each | each class ].
+	builder := RSHeatmap new.
+	reflectiveMethods := dataStructure flatCollect: [ :each |
+		                     each anyOne keys ].
+	reflectiveCategories := reflectiveMethods groupedBy: [ :each |
+		                        (each pragmaAt: #reflection:) argument ].
+	builder objectsY: reflectiveCategories keys.
+	builder objectsX: tests keys.
+	array := (1 to: reflectiveMethods size) collect: [ :e |
+		         Array new: tests size withAll: 0 ].
+	reflectiveCategories keys withIndexDo: [ :cat :catIndex |
+		| testsResults |
+		tests keys withIndexDo: [ :testClass :testClassIndex |
+			testsResults := ((tests at: testClass) collect: [ :t |
+				                 t printString -> 0 ]) asDictionary.
+			(reflectiveCategories at: cat) do: [ :method |
+				(dataStructure at: method selector) do: [ :methodDict |
+					(methodDict at: method) result defects do: [ :defect |
+						testsResults
+							at: defect printString
+							ifPresent: [ testsResults at: defect printString put: 1 ] ] ] ].
+			(array at: catIndex )
+				at: testClassIndex
+				put:
+				((testsResults values sum / testsResults size) asFloat * 100)
+					rounded ] ].
+	builder dataMatrix: array.
+	builder build.
+	builder canvas zoomToFit.
+	builder canvas open
+	"	builder canvas exportToPDF"
+]
+
+{ #category : 'matrix' }
+DynamicReflectionMutationAnalyser >> matrixByTest [
+|tests builder reflectiveMethods array| 
+	tests := analysis testCases collect: [:each | each testCase].
+	builder := RSHeatmap new.
+"	builder colorPalette: (NSScale linear
+		range: {Color gray. Color purple muchDarker})."
+	"builder labelShapeCell labelShape 
+		border: (RSBorder new color: Color black; width: 0.3);
+		color: Color white."
+	reflectiveMethods := (dataStructure flatCollect: [ :each | each anyOne keys ]).
+	builder objectsY: (reflectiveMethods collect: #printString).
+	builder objectsX: tests. 
+	array := (1 to: reflectiveMethods size) collect: [ :e | Array new: (tests size) withAll: 0].
+	reflectiveMethods withIndexDo: [ :method :methodIndex| (dataStructure at: method selector) do: [:methodDict |
+			tests withIndexCollect: [ :test :testIndex | 
+			"	1 haltIf: [(methodDict at: method) killed].	"
+				((methodDict at: method) result defects anySatisfy: [ :defect | "1 halt" defect selector = test selector and: [ defect class = test class ] ])
+				ifTrue: [ (array at: (methodIndex))at: testIndex put: 1 ] ]]. ].
+   builder dataMatrix: array.
+	builder build.
+	builder canvas zoomToFit.
+	builder canvas inspect.
+]
+
+{ #category : 'matrix' }
+DynamicReflectionMutationAnalyser >> matrixGroupedByTestClass [
+
+	| tests builder reflectiveMethods array |
+	tests := (analysis testCases collect: [ :each | each testCase ])
+		         groupedBy: [ :each | each class ].
+	builder := RSHeatmap new.
+	reflectiveMethods := dataStructure flatCollect: [ :each |
+		                     each anyOne keys ].
+	builder objectsY: (reflectiveMethods collect: #printString).
+	builder objectsX: tests keys.
+	array := (1 to: reflectiveMethods size) collect: [ :e |
+		         Array new: tests size withAll: 0 ].
+	reflectiveMethods withIndexDo: [ :method :methodIndex |
+		tests keys withIndexDo: [ :testClass :testClassIndex |
+			| testsResults |
+			testsResults := ((tests at: testClass) collect: [ :t |
+				                 t printString -> 0 ]) asDictionary.
+			(dataStructure at: method selector) do: [ :methodDict |
+				(methodDict at: method) result defects do: [ :defect |
+					testsResults
+						at: defect printString
+						ifPresent: [ testsResults at: defect printString put: 1 ] ] ].
+			(array at: methodIndex) at: testClassIndex
+				put: ((testsResults values sum / testsResults size) asFloat * 100)	rounded.
+			 ] ].
+	builder dataMatrix: array.
+	builder build.
+	builder canvas zoomToFit.
+	builder canvas open.
+	"builder canvas exportToPDF"
+]
+
 { #category : 'visualization' }
 DynamicReflectionMutationAnalyser >> percentageOfWorkingTestsAsSpiderChart [
 	"Covered mutations grouped by selector compared to the whole list of tests. We want to be able to get a better of how each selector is impacting the WHOLE project and not only the tests it is part of."
@@ -555,6 +653,7 @@ DynamicReflectionMutationAnalyser >> percentageOfWorkingTestsAsSpiderChart [
 DynamicReflectionMutationAnalyser >> run [
 
 	| mutations selectorImplementors allReflectiveMethods haltVar |
+	dataStructure := nil.
 	aliveMutants := IdentityDictionary new.
 	killedOrTerminatedMutants := IdentityDictionary new.
 	allMutants := IdentityDictionary new.
