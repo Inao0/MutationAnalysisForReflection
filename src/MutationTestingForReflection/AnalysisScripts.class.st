@@ -6,7 +6,69 @@ Class {
 }
 
 { #category : 'as yet unclassified' }
-AnalysisScripts >> analysisScript [
+AnalysisScripts >> analysisScriptMicrodown [
+ 
+| dynamiqueAnalyser |
+Metacello new
+	baseline: 'Microdown';
+	repository: 'github://pillar-markup/Microdown:dev/src';
+	onConflict: [ :ex | ex useIncoming ];
+	onUpgrade: [ :ex | ex useIncoming ];
+	load.
+	
+(PackageOrganizer default packages select: [ :e |
+		 (e name beginsWith: 'Microdown-') and: [
+			 (e name includesSubstring: 'Tests') not ] ]) do:
+		#demoteToTagInPackage.
+
+	(PackageOrganizer default packages select: [ :e |
+		 (e name beginsWith: 'Microdown-') and: [
+			 (e name includesSubstring: 'Tests') and: [(e name includesSubstring: 'Microdown-Tests') not]] ]) do: #demoteToTagInPackage.
+	
+	
+dynamiqueAnalyser := DynamicReflectionMutationAnalyser new.
+dynamiqueAnalyser
+	classesToStudy:
+		('Microdown' asPackage definedClasses reject: [ :each |
+				 each isTestCase ]);
+	correspondingTests:
+		('Microdown-Tests' asPackage definedClasses select: [ :each |
+				 each isTestCase ]);
+	selectorsToMutateAuto.
+
+dynamiqueAnalyser run.
+dynamiqueAnalyser callSitesStats.
+"self zoomToFit.
+self pdfExporter exportToFile:  ('Microdown-CallSitesBySelectors.pdf' asFileReference )"
+
+"self zoomToFit.
+self pdfExporter exportToFile:  ('Microdown-CallSites.pdf' asFileReference )"
+]
+
+{ #category : 'as yet unclassified' }
+AnalysisScripts >> analysisScriptSTON [
+	| dynamiqueAnalyser |
+	dynamiqueAnalyser := DynamicReflectionMutationAnalyser new.
+	dynamiqueAnalyser
+		classesToStudy:
+			('MySTON' asPackage definedClasses reject: [ :each |
+					 each isTestCase ]);
+		correspondingTests:
+			('MySTON-Tests' asPackage definedClasses select: [ :each |
+					 each isTestCase ]);
+		selectorsToMutateAuto.
+
+	dynamiqueAnalyser run.
+	dynamiqueAnalyser callSitesStats.
+"self zoomToFit.
+self pdfExporter exportToFile:  ('STON-CallSitesBySelectors.pdf' asFileReference )"
+
+"self zoomToFit.
+self pdfExporter exportToFile:  ('STON-CallSites.pdf' asFileReference )"
+]
+
+{ #category : 'as yet unclassified' }
+AnalysisScripts >> analysisScriptSeaside [
 
 	| analyser dynamiqueAnalyser |
 	analyser := ReflectionMutationAnalyser new.
