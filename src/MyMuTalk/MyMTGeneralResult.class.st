@@ -41,6 +41,13 @@ MyMTGeneralResult >> initializeFor: mutantsEvaluationsResults timed: anElapsedTi
 	elapsedTime := anElapsedTime
 ]
 
+{ #category : 'as yet unclassified' }
+MyMTGeneralResult >> inspectorExtension [
+
+	<inspectorPresentationOrder: 0 title: 'Mutation Results'>
+	^ MyMTMutationResultsPresenter on: self aliveMutants
+]
+
 { #category : 'testing' }
 MyMTGeneralResult >> isAcceptableScore [
 	^ self mutationScore > 80
