@@ -652,6 +652,12 @@ DynamicReflectionMutationAnalyser >> percentageOfWorkingTestsAsSpiderChart [
 { #category : 'running' }
 DynamicReflectionMutationAnalyser >> run [
 
+	^ self runWithTestResetBlock: [  ]
+]
+
+{ #category : 'running' }
+DynamicReflectionMutationAnalyser >> runWithTestResetBlock: aBlockToResetTest [
+
 	| mutations selectorImplementors allReflectiveMethods haltVar |
 	dataStructure := nil.
 	aliveMutants := IdentityDictionary new.
@@ -691,6 +697,7 @@ DynamicReflectionMutationAnalyser >> run [
 				withMethod: newMethod.
 			Transcript crShow:
 				(selectorImplementor methodClass asString , '>>' , selector).
+			aBlockToResetTest value.
 			analysis generateResults .
 			"self haltIf: [ analysis generalResult killedOrTerminatedMutants isNotEmpty ]."
 			aliveMutants at: selectorImplementor put: analysis generalResult aliveMutants copy.
