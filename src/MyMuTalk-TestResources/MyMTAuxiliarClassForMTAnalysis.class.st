@@ -13,16 +13,16 @@ MyMTAuxiliarClassForMTAnalysis class >> classMethodThatSendsSelect [
 		select: [:item | item = 1]
 ]
 
-{ #category : 'auxiliar' }
+{ #category : 'not defined protocol' }
 MyMTAuxiliarClassForMTAnalysis >> anotherMethodWithOneIfFalseSender [
-	false ifFalse: [^1].
-	^2
+	false ifFalse: [ ^ 1 ].
+	^ 2
 ]
 
-{ #category : 'auxiliar' }
+{ #category : 'not defined protocol' }
 MyMTAuxiliarClassForMTAnalysis >> methodWithOneIfFalseSender [
-	true ifFalse: [^1].
-	^2
+	true ifFalse: [ ^ 1 ].
+	^ 2
 ]
 
 { #category : 'auxiliar' }
@@ -31,12 +31,12 @@ MyMTAuxiliarClassForMTAnalysis >> methodWithOneIfTrueSender [
 	^ 2
 ]
 
-{ #category : 'auxiliar' }
+{ #category : 'not defined protocol' }
 MyMTAuxiliarClassForMTAnalysis >> methodWithOnePlusSender [
 	^ 1 + 2
 ]
 
-{ #category : 'auxiliar' }
+{ #category : 'not defined protocol' }
 MyMTAuxiliarClassForMTAnalysis >> methodWithTwoMinusSenders [
 	^ 1 - 2 - 3
 ]

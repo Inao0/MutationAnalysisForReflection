@@ -132,6 +132,43 @@ allReflectiveMethods first prefixedFailingMethod.
 ]
 
 { #category : 'as yet unclassified' }
+AnalysisScripts >> resetMyMuTalkTestResources [
+	
+	MyMTAuxiliarTestClassForContinuingTestsExecutionAfterFirstFail reset.
+
+
+	MyMTAuxiliarClassForMTAnalysis addSelectorSilently: #anotherMethodWithOneIfFalseSender withMethod: (OpalCompiler new parse: ('anotherMethodWithOneIfFalseSender
+	false ifFalse: [ ^ 1 ].
+	^ 2' )) generateMethod .
+	
+	MyMTAuxiliarClassForMTAnalysis addSelectorSilently: #methodWithOneIfFalseSender withMethod: (OpalCompiler new parse: ('methodWithOneIfFalseSender
+	true ifFalse: [ ^ 1 ].
+	^ 2' )) generateMethod.
+	
+	MyMTAuxiliarClassForMTAnalysis addSelectorSilently: #methodWithOneIfTrueSender withMethod: (OpalCompiler new parse: ('methodWithOneIfTrueSender
+	true ifTrue: [ ^ 1 ].
+	^ 2' )) generateMethod.
+	
+	MyMTAuxiliarClassForMTAnalysis addSelectorSilently: #methodWithOnePlusSender withMethod: (OpalCompiler new parse: ('methodWithOnePlusSender
+	^ 1 + 2' )) generateMethod.
+	
+	MyMTAuxiliarClassForMTAnalysis addSelectorSilently: #methodWithTwoMinusSenders withMethod: (OpalCompiler new parse: ('methodWithTwoMinusSenders
+	^ 1 - 2 - 3')) generateMethod.
+
+	MyMTAuxiliarClassForTimeTestFilter addSelectorSilently: #simpleMethod withMethod: (OpalCompiler new parse: ('#simpleMethod
+	^ 1 + 1 ')) generateMethod.
+]
+
+{ #category : 'as yet unclassified' }
+AnalysisScripts >> resetSeasideTestResources [
+
+		{WATestingMetadataFileLibrary.
+		WATestingFiles } do: [ :each |
+		each removeSelector: #demoJpeg.
+		each removeSelector: #demoTxt ].
+]
+
+{ #category : 'as yet unclassified' }
 AnalysisScripts >> settingUpSeaside [
 
 	Metacello new

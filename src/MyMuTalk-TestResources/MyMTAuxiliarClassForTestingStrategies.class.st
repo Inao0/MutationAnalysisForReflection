@@ -10,9 +10,10 @@ MyMTAuxiliarClassForTestingStrategies >> aNotCoveredMethod [
 	true ifTrue: [^2]
 ]
 
-{ #category : 'not defined category' }
+{ #category : 'not defined protocol' }
 MyMTAuxiliarClassForTestingStrategies >> method1 [
-	true ifTrue: [^1]
+
+	true ifTrue: [ ^ 1 ]
 ]
 
 { #category : 'not defined category' }
