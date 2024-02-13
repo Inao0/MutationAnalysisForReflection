@@ -139,22 +139,24 @@ AnalysisScripts >> resetMyMuTalkTestResources [
 
 	MyMTAuxiliarClassForMTAnalysis addSelectorSilently: #anotherMethodWithOneIfFalseSender withMethod: (OpalCompiler new parse: ('anotherMethodWithOneIfFalseSender
 	false ifFalse: [ ^ 1 ].
-	^ 2' )).
+	^ 2' )) generateMethod .
 	
 	MyMTAuxiliarClassForMTAnalysis addSelectorSilently: #methodWithOneIfFalseSender withMethod: (OpalCompiler new parse: ('methodWithOneIfFalseSender
 	true ifFalse: [ ^ 1 ].
-	^ 2' )).
+	^ 2' )) generateMethod.
 	
 	MyMTAuxiliarClassForMTAnalysis addSelectorSilently: #methodWithOneIfTrueSender withMethod: (OpalCompiler new parse: ('methodWithOneIfTrueSender
 	true ifTrue: [ ^ 1 ].
-	^ 2' )).
+	^ 2' )) generateMethod.
 	
 	MyMTAuxiliarClassForMTAnalysis addSelectorSilently: #methodWithOnePlusSender withMethod: (OpalCompiler new parse: ('methodWithOnePlusSender
-	^ 1 + 2' )).
+	^ 1 + 2' )) generateMethod.
 	
-	MyMTAuxiliarClassForMTAnalysis addSelectorSilently: #methodWithOnePlusSender withMethod: (OpalCompiler new parse: ('methodWithTwoMinusSenders
-	^ 1 - 2 - 3')).
+	MyMTAuxiliarClassForMTAnalysis addSelectorSilently: #methodWithTwoMinusSenders withMethod: (OpalCompiler new parse: ('methodWithTwoMinusSenders
+	^ 1 - 2 - 3')) generateMethod.
 
+	MyMTAuxiliarClassForTimeTestFilter addSelectorSilently: #simpleMethod withMethod: (OpalCompiler new parse: ('#simpleMethod
+	^ 1 + 1 ')) generateMethod.
 ]
 
 { #category : 'as yet unclassified' }

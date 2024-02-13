@@ -5,8 +5,7 @@ Class {
 	#package : 'MyMuTalk-TestResources'
 }
 
-{ #category : 'accessing' }
-MyMTAuxiliarClassForTimeTestFilter >> simpleMethod [
-
-	^ 1 + 1
+{ #category : 'not defined protocol' }
+MyMTAuxiliarClassForTimeTestFilter >> #simpleMethod [
+	^ 1 + 1 
 ]
