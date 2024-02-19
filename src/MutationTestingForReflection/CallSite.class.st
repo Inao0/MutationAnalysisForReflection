@@ -51,6 +51,11 @@ CallSite >> methodComparison: aMethod [
 ]
 
 { #category : 'accessing' }
+CallSite >> noTestRunFromv1 [
+	 ^ resultFromv1 runCount = 0
+]
+
+{ #category : 'accessing' }
 CallSite >> nodeNumber [
 
 	^ nodeNumber
@@ -60,6 +65,11 @@ CallSite >> nodeNumber [
 CallSite >> nodeNumber: anObject [
 
 	nodeNumber := anObject
+]
+
+{ #category : 'accessing' }
+CallSite >> notCoveredFromv1 [ 
+	 ^ resultFromv1 runCount = 0 or: [ resultFromv1 survived ]
 ]
 
 { #category : 'accessing' }

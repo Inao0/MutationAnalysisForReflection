@@ -636,7 +636,7 @@ DynamicReflectionMutationAnalyser >> numberOfClassesInProject [
 
 { #category : 'as yet unclassified' }
 DynamicReflectionMutationAnalyser >> numberOfStudiedCallSites [
-	^ (dataStructure values flatCollect: #keys) size
+	^ self studiedCallSites size
 ]
 
 { #category : 'accessing' }
@@ -753,4 +753,9 @@ DynamicReflectionMutationAnalyser >> selectorsToMutateAuto [
 	reflectiveSelectors := ((((Pragma allNamed: 'reflection:') collect: #method) reject: #isFromTrait) collect: #selector) asSet.
 	usedSelectors := classesToStudy flatCollect: [ :eachClass | eachClass methods flatCollect: #messages].
 	selectorsToMutate := reflectiveSelectors select: [ :each | usedSelectors includes: each ] 
+]
+
+{ #category : 'as yet unclassified' }
+DynamicReflectionMutationAnalyser >> studiedCallSites [
+	^ (dataStructure values flatCollect: #keys)
 ]

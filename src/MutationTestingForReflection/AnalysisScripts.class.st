@@ -114,7 +114,6 @@ true ifTrue: [ ^ 1 ]') generateMethod.
 ]
 
 { #category : 'as yet unclassified' }
-
 AnalysisScripts class >> resetSeasideTestResources [
 
 		{WATestingMetadataFileLibrary.
@@ -124,7 +123,6 @@ AnalysisScripts class >> resetSeasideTestResources [
 ]
 
 { #category : 'as yet unclassified' }
-
 AnalysisScripts >> analysisScriptMicrodown [
  
 | dynamiqueAnalyser |
@@ -255,7 +253,7 @@ AnalysisScripts >> analysisScriptSeaside [
 	dynamiqueAnalyser matrixGroupedByTestClass.
 
 ]
-	
+
 { #category : 'as yet unclassified' }
 AnalysisScripts >> analysisScriptTestPackage [	
 	| dynamiqueAnalyser |
