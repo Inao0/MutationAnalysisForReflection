@@ -729,6 +729,7 @@ DynamicReflectionMutationAnalyser >> runWithTestResetBlock: aBlockToResetTest [
 				withMethod: newMethod ] ].
 	"Percentage of call sites covered by the tests for each selectors"
 	self class removeDuplicateMethodsWithPrefix. 	Transcript crShow: '--- END ---'.
+  callSiteCancellingKilledOrTerminated := nil. callSiteCancellingAlive:= nil
 "	self callSitesStats.
 	self percentageOfWorkingTestsAsSpiderChart"
 ]
