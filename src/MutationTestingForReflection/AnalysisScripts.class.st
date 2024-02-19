@@ -1,9 +1,117 @@
 Class {
 	#name : 'AnalysisScripts',
 	#superclass : 'Object',
+	#classInstVars : [
+		'resetMuTalkDict'
+	],
 	#category : 'MutationTestingForReflection',
 	#package : 'MutationTestingForReflection'
 }
+
+{ #category : 'as yet unclassified' }
+AnalysisScripts class >> resetMyMuTalkTestResources [
+
+	"resetMuTalkDict := nil"
+
+	resetMuTalkDict ifNil: [
+		resetMuTalkDict := Dictionary new.
+		resetMuTalkDict 
+			at: ( MyMTAuxiliarClassForMTAnalysis -> #anotherMethodWithOneIfFalseSender)
+			put: (OpalCompiler new parse: 'anotherMethodWithOneIfFalseSender
+	false ifFalse: [ ^ 1 ].
+	^ 2') generateMethod.
+		resetMuTalkDict 
+			at: ( MyMTAuxiliarClassForMTAnalysis -> #methodWithOneIfFalseSender)
+			put: (OpalCompiler new parse: 'methodWithOneIfFalseSender
+	true ifFalse: [ ^ 1 ].
+	^ 2') generateMethod.
+		resetMuTalkDict 
+			at: ( MyMTAuxiliarClassForMTAnalysis -> #methodWithOneIfTrueSender)
+			put: (OpalCompiler new parse: 'methodWithOneIfTrueSender
+	true ifTrue: [ ^ 1 ].
+	^ 2') generateMethod.
+		resetMuTalkDict 
+			at: ( MyMTAuxiliarClassForMTAnalysis -> #methodWithOnePlusSender)
+			put: (OpalCompiler new parse: 'methodWithOnePlusSender
+	^ 1 + 2') generateMethod.
+		resetMuTalkDict 
+			at: (MyMTAuxiliarClassForMTAnalysis -> #methodWithTwoMinusSenders)
+			put: (OpalCompiler new parse: 'methodWithTwoMinusSenders
+	^ 1 - 2 - 3') generateMethod.
+		resetMuTalkDict 
+			at: (MyMTAuxiliarClassForTimeTestFilter -> #simpleMethod)
+			put: (OpalCompiler new parse: 'simpleMethod
+	^ 1 + 1 ') generateMethod.
+		resetMuTalkDict 
+			at: (MyMTFakeInfiniteLoopForTest -> #iterativeFactorial:)
+			put: (OpalCompiler new parse: 'iterativeFactorial: anInt
+
+	| factorial i |
+	^ anInt = 1
+		  ifTrue: [ 1 ]
+		  ifFalse: [ 
+			  factorial := 1.
+			  i := 2.
+			  "Use a whileTrue: so a mutation can introduce an infinite loop here"
+			  [ i <= anInt ] whileTrue: [ 
+				  factorial := factorial * i.
+				  i := i + 1 ].
+			  factorial ]') generateMethod.
+		resetMuTalkDict 
+			at: (MyMTFakeInfiniteLoopForTest -> #recursiveFactorial:)
+			put: (OpalCompiler new parse: 'recursiveFactorial: anInt
+
+	"If a mutation replaces this cut condition to false, this will loop"
+	anInt = 1 ifTrue: [ ^ 1 ].
+
+	^ anInt * (self recursiveFactorial: anInt - 1)') generateMethod.
+		resetMuTalkDict 
+			at: (MyMTAuxiliarClassForMatrix -> #reset)
+			put: (OpalCompiler new
+					 class: MyMTAuxiliarClassForMatrix;
+					 parse: 'reset
+| count |
+	count := counter.
+	counter := 0.
+	^ count') generateMethod.
+		resetMuTalkDict 
+			at: (MyMTAuxiliarClassForTestingStrategies -> #method1)
+			put: (OpalCompiler new parse: 'method1
+true ifTrue: [ ^ 1 ]') generateMethod.
+		resetMuTalkDict 
+			at: (MyMTAuxiliarClassForMTAnalysis class -> #classMethodThatSendsSelect)
+			put: (OpalCompiler new
+					 class: MyMTAuxiliarClassForMTAnalysis class;
+					 parse: 'classMethodThatSendsSelect
+	| collection |
+	collection := OrderedCollection with: 1.
+	^ collection select: [ :item | item = 1 ]') generateMethod.
+		resetMuTalkDict 
+			at: (MyMTCIHelper->#myRandom)
+			put: (OpalCompiler new
+					 class: MyMTCIHelper;
+					 parse: 'myRandom
+
+	^ myRandom') generateMethod.
+		resetMuTalkDict 
+			at: (MyMTCIHelper->#myObject)
+			put: (OpalCompiler new
+					 class: MyMTCIHelper;
+					 parse: 'myObject
+
+	^ myObject') generateMethod.
+		resetMuTalkDict 
+			at: (MyMTCIHelper->#myLiteral)
+			put: (OpalCompiler new
+					 class: MyMTCIHelper;
+					 parse: 'myLiteral
+
+	^ myLiteral') generateMethod ].
+
+	MyMTAuxiliarTestClassForContinuingTestsExecutionAfterFirstFail reset.
+	resetMuTalkDict keysAndValuesDo: [ :association :meth |
+		association key addSelectorSilently: meth selector withMethod: meth ]
+]
 
 { #category : 'as yet unclassified' }
 AnalysisScripts >> analysisScriptMicrodown [
@@ -129,34 +237,6 @@ allReflectiveMethods first prefixedFailingMethod.
 
 	dynamiqueAnalyser percentageOfWorkingTestsAsSpiderChart.
 	dynamiqueAnalyser exportForUpsetWithSuffix: 'SeasideDyn'
-]
-
-{ #category : 'as yet unclassified' }
-AnalysisScripts >> resetMyMuTalkTestResources [
-	
-	MyMTAuxiliarTestClassForContinuingTestsExecutionAfterFirstFail reset.
-
-
-	MyMTAuxiliarClassForMTAnalysis addSelectorSilently: #anotherMethodWithOneIfFalseSender withMethod: (OpalCompiler new parse: ('anotherMethodWithOneIfFalseSender
-	false ifFalse: [ ^ 1 ].
-	^ 2' )) generateMethod .
-	
-	MyMTAuxiliarClassForMTAnalysis addSelectorSilently: #methodWithOneIfFalseSender withMethod: (OpalCompiler new parse: ('methodWithOneIfFalseSender
-	true ifFalse: [ ^ 1 ].
-	^ 2' )) generateMethod.
-	
-	MyMTAuxiliarClassForMTAnalysis addSelectorSilently: #methodWithOneIfTrueSender withMethod: (OpalCompiler new parse: ('methodWithOneIfTrueSender
-	true ifTrue: [ ^ 1 ].
-	^ 2' )) generateMethod.
-	
-	MyMTAuxiliarClassForMTAnalysis addSelectorSilently: #methodWithOnePlusSender withMethod: (OpalCompiler new parse: ('methodWithOnePlusSender
-	^ 1 + 2' )) generateMethod.
-	
-	MyMTAuxiliarClassForMTAnalysis addSelectorSilently: #methodWithTwoMinusSenders withMethod: (OpalCompiler new parse: ('methodWithTwoMinusSenders
-	^ 1 - 2 - 3')) generateMethod.
-
-	MyMTAuxiliarClassForTimeTestFilter addSelectorSilently: #simpleMethod withMethod: (OpalCompiler new parse: ('#simpleMethod
-	^ 1 + 1 ')) generateMethod.
 ]
 
 { #category : 'as yet unclassified' }

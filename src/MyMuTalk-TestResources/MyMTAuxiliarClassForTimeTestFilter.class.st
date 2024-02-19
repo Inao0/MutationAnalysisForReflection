@@ -6,6 +6,6 @@ Class {
 }
 
 { #category : 'not defined protocol' }
-MyMTAuxiliarClassForTimeTestFilter >> #simpleMethod [
+MyMTAuxiliarClassForTimeTestFilter >> simpleMethod [
 	^ 1 + 1 
 ]

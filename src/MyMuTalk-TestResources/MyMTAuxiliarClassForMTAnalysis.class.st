@@ -5,12 +5,11 @@ Class {
 	#package : 'MyMuTalk-TestResources'
 }
 
-{ #category : 'auxiliar' }
+{ #category : 'not defined protocol' }
 MyMTAuxiliarClassForMTAnalysis class >> classMethodThatSendsSelect [
-	|collection|
+	| collection |
 	collection := OrderedCollection with: 1.
-	^collection 
-		select: [:item | item = 1]
+	^ collection select: [ :item | item = 1 ]
 ]
 
 { #category : 'not defined protocol' }
@@ -25,7 +24,7 @@ MyMTAuxiliarClassForMTAnalysis >> methodWithOneIfFalseSender [
 	^ 2
 ]
 
-{ #category : 'auxiliar' }
+{ #category : 'not defined protocol' }
 MyMTAuxiliarClassForMTAnalysis >> methodWithOneIfTrueSender [
 	true ifTrue: [ ^ 1 ].
 	^ 2
