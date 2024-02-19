@@ -628,6 +628,23 @@ DynamicReflectionMutationAnalyser >> matrixGroupedByTestClass [
 	"builder canvas exportToPDF"
 ]
 
+{ #category : 'as yet unclassified' }
+DynamicReflectionMutationAnalyser >> numberOfClassesInProject [
+
+	^ classesToStudy size
+]
+
+{ #category : 'as yet unclassified' }
+DynamicReflectionMutationAnalyser >> numberOfStudiedCallSites [
+	^ (dataStructure values flatCollect: #keys) size
+]
+
+{ #category : 'as yet unclassified' }
+DynamicReflectionMutationAnalyser >> numberOfTestsInProject [
+
+	^  correspondingTests asOrderedCollection sum: [ :each | each buildSuite tests size ]
+]
+
 { #category : 'visualization' }
 DynamicReflectionMutationAnalyser >> percentageOfWorkingTestsAsSpiderChart [
 	"Covered mutations grouped by selector compared to the whole list of tests. We want to be able to get a better of how each selector is impacting the WHOLE project and not only the tests it is part of."
