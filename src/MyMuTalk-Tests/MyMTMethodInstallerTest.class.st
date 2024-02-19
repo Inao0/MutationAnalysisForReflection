@@ -14,8 +14,12 @@ MyMTMethodInstallerTest class >> packageNamesUnderTest [
 	^ #('MutationTesting-Model')
 ]
 
-{ #category : 'testProtocol' }
+{ #category : 'not defined protocol' }
 MyMTMethodInstallerTest >> methodInstalled [  ^3+4
+]
+
+{ #category : 'not defined protocol' }
+MyMTMethodInstallerTest >> methodNotInstalled [  ^3+4
 ]
 
 { #category : 'as yet unclassified' }

@@ -114,6 +114,7 @@ true ifTrue: [ ^ 1 ]') generateMethod.
 ]
 
 { #category : 'as yet unclassified' }
+
 AnalysisScripts class >> resetSeasideTestResources [
 
 		{WATestingMetadataFileLibrary.
@@ -123,6 +124,7 @@ AnalysisScripts class >> resetSeasideTestResources [
 ]
 
 { #category : 'as yet unclassified' }
+
 AnalysisScripts >> analysisScriptMicrodown [
  
 | dynamiqueAnalyser |
@@ -245,8 +247,7 @@ AnalysisScripts >> analysisScriptSeaside [
 	    select: [ :each | each superclass = TestCaseWithResetForSeaside ] 
 	    thenDo: [:each | each superclass: TestCase].
 	AnalysisScripts resetSeasideTestResources .
-
-	dynamiqueAnalyser numberOfClassesInProject."547"
+  dynamiqueAnalyser numberOfClassesInProject."547"
 	dynamiqueAnalyser numberOfTestsInProject."1004"
 	dynamiqueAnalyser numberOfStudiedCallSites. "1314"
 	dynamiqueAnalyser matrix.
@@ -254,7 +255,7 @@ AnalysisScripts >> analysisScriptSeaside [
 	dynamiqueAnalyser matrixGroupedByTestClass.
 
 ]
-
+	
 { #category : 'as yet unclassified' }
 AnalysisScripts >> analysisScriptTestPackage [	
 	| dynamiqueAnalyser |
@@ -265,8 +266,7 @@ AnalysisScripts >> analysisScriptTestPackage [
 					 each isTestCase ]);
 		correspondingTests:
 			('TestPackage-Tests' asPackage definedClasses select: [ :each |
-					 each isTestCase ]);
-		selectorsToMutateAuto.
+					 each isTestCase ]);		selectorsToMutateAuto.
 
 	dynamiqueAnalyser run.
 	dynamiqueAnalyser callSitesStats.

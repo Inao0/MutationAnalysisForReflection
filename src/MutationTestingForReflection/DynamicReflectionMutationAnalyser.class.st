@@ -260,7 +260,7 @@ DynamicReflectionMutationAnalyser >> callSiteCoverageBySelectorsV2 [
 	reflectiveBySelector := ((groupedBySelectors collect: [ :each |
 		                       each at: #reflective ]) values) collect: #size.
 	chart add: ((RSAbstractChart barHeights: methodNotCoveredBySelectors)
-			color: (palette scale: ##methodNotCovered)).
+			color: (palette scale: #methodNotCovered)).
 	chart add:
 		((RSAbstractChart barHeights: callSiteNotCoveredBySelectors)
 			color: (palette scale: #callSiteNotCovered);
@@ -628,7 +628,7 @@ DynamicReflectionMutationAnalyser >> matrixGroupedByTestClass [
 	"builder canvas exportToPDF"
 ]
 
-{ #category : 'as yet unclassified' }
+{ #category : 'accessing' }
 DynamicReflectionMutationAnalyser >> numberOfClassesInProject [
 
 	^ classesToStudy size
@@ -639,7 +639,7 @@ DynamicReflectionMutationAnalyser >> numberOfStudiedCallSites [
 	^ (dataStructure values flatCollect: #keys) size
 ]
 
-{ #category : 'as yet unclassified' }
+{ #category : 'accessing' }
 DynamicReflectionMutationAnalyser >> numberOfTestsInProject [
 
 	^  correspondingTests asOrderedCollection sum: [ :each | each buildSuite tests size ]
@@ -729,7 +729,7 @@ DynamicReflectionMutationAnalyser >> runWithTestResetBlock: aBlockToResetTest [
 				withMethod: newMethod ] ].
 	"Percentage of call sites covered by the tests for each selectors"
 	self class removeDuplicateMethodsWithPrefix. 	Transcript crShow: '--- END ---'.
-		callSiteCancellingKilledOrTerminated := nil. callSiteCancellingAlive:= nil
+  callSiteCancellingKilledOrTerminated := nil. callSiteCancellingAlive:= nil
 "	self callSitesStats.
 	self percentageOfWorkingTestsAsSpiderChart"
 ]
