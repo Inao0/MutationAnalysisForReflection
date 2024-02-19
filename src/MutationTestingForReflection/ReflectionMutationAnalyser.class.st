@@ -182,7 +182,8 @@ ReflectionMutationAnalyser >> run [
 		            classesToMutate: classesToStudy;
 		            operators: mutations;
 		            testSelectionStrategy: MTSelectingFromCoverageTestSelectionStrategy new;
-						yourself.
+						yourself;
+						doNotStopOnErrorOrFail.
 	"	 with: AllTestsMethodsRunningMutantEvaluationStrategy new."
 	analysis run.
 

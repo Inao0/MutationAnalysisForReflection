@@ -23,7 +23,7 @@ MyMTCIHelper >> moveX [
 	myObject setX: myObject x + 1 setY: myObject y
 ]
 
-{ #category : 'accessing' }
+{ #category : 'not defined protocol' }
 MyMTCIHelper >> myLiteral [
 
 	^ myLiteral
@@ -35,7 +35,7 @@ MyMTCIHelper >> myLiteral: anObject [
 	myLiteral := anObject
 ]
 
-{ #category : 'accessing' }
+{ #category : 'not defined protocol' }
 MyMTCIHelper >> myObject [
 
 	^ myObject
@@ -47,7 +47,7 @@ MyMTCIHelper >> myObject: anObject [
 	myObject := anObject
 ]
 
-{ #category : 'accessing' }
+{ #category : 'not defined protocol' }
 MyMTCIHelper >> myRandom [
 
 	^ myRandom

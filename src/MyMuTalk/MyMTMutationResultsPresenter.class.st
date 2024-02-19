@@ -13,6 +13,13 @@ Class {
 	#package : 'MyMuTalk'
 }
 
+{ #category : 'as yet unclassified' }
+MyMTMutationResultsPresenter class >> ___addAndClassifySelector: arg1 withMethod: arg2 inProtocol: arg3 [
+
+	<prefixedReflectiveMethodProxy>
+	^ self addAndClassifySelector: arg1 withMethod: arg2 inProtocol: arg3
+]
+
 { #category : 'accessing - method dictionary' }
 MyMTMutationResultsPresenter class >> addAndClassifySelector: selector withMethod: compiledMethod inProtocol: aProtocol [
 	"When a new methods is added, I add it to the localMethodDict and also propagate the changes to my users"

@@ -10,7 +10,7 @@ MyMTClassForTestingCoverage class >> aClassCoveredMethod [
 	^true.
 ]
 
-{ #category : 'instance creation' }
+{ #category : 'as yet unclassified' }
 MyMTClassForTestingCoverage class >> new: aSize [
 	" from UUID class>> #new:"
 	(aSize == 16) ifFalse: [ self error: 'Wrong UUID size' ].

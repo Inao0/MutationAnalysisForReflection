@@ -52,8 +52,9 @@ MyMTTimeBudgetTest >> testWithNoTimeForMutantsRespectsDeadline [
 MyMTTimeBudgetTest >> testWithNoTimeForMutantsRunsNoMutants [
 
 	| duration analysisTime result |
+	<modified>
 	"Divide duration by 4 to make sure we never have time for mutants"
-	duration := self fixedAnalysisTime / 4.
+	duration := self fixedAnalysisTime / 10.
 	analysisTime := [ result := self runAnalysisForDuration: duration ]
 		                timeToRun.
 

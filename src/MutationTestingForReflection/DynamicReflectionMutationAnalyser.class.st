@@ -260,22 +260,22 @@ DynamicReflectionMutationAnalyser >> callSiteCoverageBySelectorsV2 [
 	reflectiveBySelector := ((groupedBySelectors collect: [ :each |
 		                       each at: #reflective ]) values) collect: #size.
 	chart add: ((RSAbstractChart barHeights: methodNotCoveredBySelectors)
-			color: (palette scale: methodNotCoveredBySelectors)).
+			color: (palette scale: ##methodNotCovered)).
 	chart add:
 		((RSAbstractChart barHeights: callSiteNotCoveredBySelectors)
-			color: (palette scale: callSiteNotCoveredBySelectors);
+			color: (palette scale: #callSiteNotCovered);
 			 bottom: methodNotCoveredBySelectors).
 	chart add:
 		((RSAbstractChart barHeights: baseBySelectors)
-			color: (palette scale: baseBySelectors);
+			color: (palette scale: #baseLevel);
 			 bottom: callSiteNotCoveredBySelectors + methodNotCoveredBySelectors).
 	chart add:
 		((RSAbstractChart barHeights: polymorphicBySelectors )
-			color: (palette scale: polymorphicBySelectors);
+			color: (palette scale: #polymorphism);
 			 bottom: callSiteNotCoveredBySelectors + methodNotCoveredBySelectors + baseBySelectors ).
 	chart add:
 		((RSAbstractChart barHeights: reflectiveBySelector )
-			color: (palette scale: reflectiveBySelector);
+			color: (palette scale: #reflective);
 			 bottom:  callSiteNotCoveredBySelectors + methodNotCoveredBySelectors + baseBySelectors + polymorphicBySelectors ).
 			
 	chart horizontalTick fromNames: groupedBySelectors keys.
@@ -409,6 +409,7 @@ DynamicReflectionMutationAnalyser >> callSitesStats [
 	"callSiteCancellingKilledOrTerminated := nil. callSiteCancellingAlive:= nil
 	"
 	callSiteCancellingAlive ifNil: [
+		dataStructure := nil.
 		v1analyser := ReflectionMutationAnalyser new.
 		v1analyser
 			classesToStudy: classesToStudy;
@@ -565,7 +566,7 @@ DynamicReflectionMutationAnalyser >> matrix [
 	builder dataMatrix: array.
 	builder build.
 	builder canvas zoomToFit.
-	builder canvas open
+	builder canvas inspect
 	"	builder canvas exportToPDF"
 ]
 
@@ -623,7 +624,7 @@ DynamicReflectionMutationAnalyser >> matrixGroupedByTestClass [
 	builder dataMatrix: array.
 	builder build.
 	builder canvas zoomToFit.
-	builder canvas open.
+	builder canvas inspect.
 	"builder canvas exportToPDF"
 ]
 
@@ -676,6 +677,7 @@ DynamicReflectionMutationAnalyser >> runWithTestResetBlock: aBlockToResetTest [
 		yourself.
 	analysis stopOnErrorOrFail: false.
 	analysis run1InitialTestRunAndCoverage.
+	analysis coverageAnalysisResult haltIfNil.
 	Transcript crShow: '--- START ---'.
 	selectorsToMutate do: [ :selector |
 		Transcript crShow: selector.
@@ -709,7 +711,8 @@ DynamicReflectionMutationAnalyser >> runWithTestResetBlock: aBlockToResetTest [
 				addSelectorSilently: newMethod selector
 				withMethod: newMethod ] ].
 	"Percentage of call sites covered by the tests for each selectors"
-	self class removeDuplicateMethodsWithPrefix. 
+	self class removeDuplicateMethodsWithPrefix. 	Transcript crShow: '--- END ---'.
+		callSiteCancellingKilledOrTerminated := nil. callSiteCancellingAlive:= nil
 "	self callSitesStats.
 	self percentageOfWorkingTestsAsSpiderChart"
 ]

@@ -31,8 +31,7 @@ MyMTAuxiliarClassForMatrix >> plus: aNumber [
 
 { #category : 'not defined protocol' }
 MyMTAuxiliarClassForMatrix >> reset [
-
-	| count |
+| count |
 	count := counter.
 	counter := 0.
 	^ count
