@@ -114,6 +114,15 @@ true ifTrue: [ ^ 1 ]') generateMethod.
 ]
 
 { #category : 'as yet unclassified' }
+AnalysisScripts class >> resetSeasideTestResources [
+
+		{WATestingMetadataFileLibrary.
+		WATestingFiles } do: [ :each |
+		each removeSelector: #demoJpeg.
+		each removeSelector: #demoTxt ].
+]
+
+{ #category : 'as yet unclassified' }
 AnalysisScripts >> analysisScriptMicrodown [
  
 | dynamiqueAnalyser |
@@ -214,43 +223,8 @@ self pdfExporter exportToFile:  ('STON-CallSites.pdf' asFileReference )"
 
 { #category : 'as yet unclassified' }
 AnalysisScripts >> analysisScriptSeaside [
-
-	| analyser dynamiqueAnalyser |
-	analyser := ReflectionMutationAnalyser new.
-	analyser
-		classesToStudy:
-			('Seaside' asPackage definedClasses reject: [ :each |
-					 each isTestCase ]);
-		correspondingTests:
-			('Seaside-Tests' asPackage definedClasses select: [ :each |
-					 each isTestCase ]);
-		selectorsToMutate:
-			#( #instVarAt:put: #receiver: #return: #allSubInstances
-			   #sender #resume #value:value: #classPool #superclass #isKindOf:
-			   #allInstancesDo: #perform:with: #allSubInstancesDo:
-			   #value #terminate #receiver #size #bindingOf: #resume: #perform:
-			   #at:put: #respondsTo: #at: #subclasses #method #instSize
-			   #inheritsFrom: #message #identityHash #instVarAt: #selectors
-			   #selector: #isValid #value: #withAllSubclasses
-			   #terminateTo: #instVarNamed:put: #selector #isMeta #perform:withArguments:
-			   #argumentCount #class #perform:with:with: #allSubclasses
-			   #valueWithArguments: #className #numArgs ).
-
-	analyser run.
-	analyser coverageOfCallSites.
-	analyser percentageOfWorkingTestsAsSpiderChart.
-	analyser exportForUpsetWithSuffix: 'Seaside'.
-
-
-	"DYNAMIQUE ANALYSIS"
-	"DynamicReflectionMutationAnalyser duplicateReflectiveMethodsWithPrefix."
-	"allReflectiveMethods := ((Pragma allNamed: 'reflection:') collect: #method) reject: #isFromTrait.
-allReflectiveMethods do: [ :method | 
-	prefixedMethod := method prefixedProxyMethod.
-	prefixedMethod methodClass addSelectorSilently: prefixedMethod selector withMethod: prefixedMethod ].
-allProxyPrefixedMethods := ((Pragma allNamed: 'prefixedReflectiveMethodProxy') collect: #method) reject: #isFromTrait.
-allReflectiveMethods first prefixedFailingMethod.
-"
+	| oldDynamiqueAnalyser dynamiqueAnalyser |
+	oldDynamiqueAnalyser := dynamiqueAnalyser.
 	dynamiqueAnalyser := DynamicReflectionMutationAnalyser new.
 	dynamiqueAnalyser
 		classesToStudy:
@@ -260,20 +234,25 @@ allReflectiveMethods first prefixedFailingMethod.
 			('Seaside-Tests' asPackage definedClasses select: [ :each |
 					 each isTestCase ]);
 		selectorsToMutateAuto.
-	"	selectorsToMutate: { 'isKindOf:' .'perform:'.'superclass' . #receiver .'withAllSubclasses'. 'respondsTo:' . #selector. 'allSubclasses' .'method' . #message . 'inheritsFrom:' .'selectors'. 'bindingOf:'. 'className'}."
-
-	dynamiqueAnalyser run.
-
-	"Reset seaside class test. Otherwise fails"
-	{
-		WATestingMetadataFileLibrary.
-		WATestingFiles } do: [ :each |
-		each removeSelector: #demoJpeg.
-		each removeSelector: #demoTxt ].
+"removed value size at:put: "
+	'Seaside-Tests' asPackage definedClasses 
+	    select: [ :each | each superclass = TestCase ] 
+	    thenDo: [:each | each superclass: TestCaseWithResetForSeaside ].
+	AnalysisScripts resetSeasideTestResources.
+	dynamiqueAnalyser runWithTestResetBlock: [].
 	dynamiqueAnalyser callSitesStats.
+	'Seaside-Tests' asPackage definedClasses 
+	    select: [ :each | each superclass = TestCaseWithResetForSeaside ] 
+	    thenDo: [:each | each superclass: TestCase].
+	AnalysisScripts resetSeasideTestResources .
 
-	dynamiqueAnalyser percentageOfWorkingTestsAsSpiderChart.
-	dynamiqueAnalyser exportForUpsetWithSuffix: 'SeasideDyn'
+	dynamiqueAnalyser numberOfClassesInProject."547"
+	dynamiqueAnalyser numberOfTestsInProject."1004"
+	dynamiqueAnalyser numberOfStudiedCallSites. "1314"
+	dynamiqueAnalyser matrix.
+	dynamiqueAnalyser matrixByTest.
+	dynamiqueAnalyser matrixGroupedByTestClass.
+
 ]
 
 { #category : 'as yet unclassified' }
@@ -291,15 +270,6 @@ AnalysisScripts >> analysisScriptTestPackage [
 
 	dynamiqueAnalyser run.
 	dynamiqueAnalyser callSitesStats.
-]
-
-{ #category : 'as yet unclassified' }
-AnalysisScripts >> resetSeasideTestResources [
-
-		{WATestingMetadataFileLibrary.
-		WATestingFiles } do: [ :each |
-		each removeSelector: #demoJpeg.
-		each removeSelector: #demoTxt ].
 ]
 
 { #category : 'as yet unclassified' }
