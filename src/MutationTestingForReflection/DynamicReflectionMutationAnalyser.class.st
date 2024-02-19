@@ -759,3 +759,23 @@ DynamicReflectionMutationAnalyser >> selectorsToMutateAuto [
 DynamicReflectionMutationAnalyser >> studiedCallSites [
 	^ (dataStructure values flatCollect: #keys)
 ]
+
+{ #category : 'as yet unclassified' }
+DynamicReflectionMutationAnalyser >> vsStatiqueAnalysis [
+	
+	| callSites notCoveredCallSites coveredCallSites notCoveredReflectiveCS staticallyReflexiveSelectors results coveredReflectiveCS|
+	results := Dictionary new.
+	callSites := self studiedCallSites.
+	notCoveredCallSites := callSites select: [ :e | e notCoveredFromv1 ].
+	coveredCallSites := callSites reject: [ :e | e notCoveredFromv1 ].
+	staticallyReflexiveSelectors := selectorsToMutate select: [ :each | each implementors allSatisfy: [:imp | imp hasPragmaNamed: #reflection:] ].
+	notCoveredReflectiveCS := (notCoveredCallSites select: [:e | staticallyReflexiveSelectors includes: e selector  ] ).
+	coveredReflectiveCS := (coveredCallSites select: [:e | staticallyReflexiveSelectors includes: e selector  ] )..
+	results at:  #notCoveredReflexive put: notCoveredReflectiveCS.
+	results at:  #coveredReflexive put: coveredCallSites.
+	results at:  #notCoveredAmbigous put: (notCoveredCallSites difference: notCoveredReflectiveCS).
+	results at:  #coveredAmbigous put: (coveredCallSites difference: coveredCallSites).
+
+	^ results
+	
+]
